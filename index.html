@@ -18,17 +18,6 @@
         extend: {
           fontFamily: {
             sans: ['Inter', 'sans-serif'],
-          },
-          colors: {
-            brand: {
-              50: '#f0fdf4',
-              100: '#dcfce7',
-              500: '#22c55e',
-              600: '#16a34a',
-              700: '#15803d',
-              800: '#166534',
-              900: '#14532d',
-            }
           }
         }
       }
@@ -40,13 +29,15 @@
     ::-webkit-scrollbar-track { background: #f1f5f9; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-    .badge-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+    .pallet-wood {
+      background: linear-gradient(180deg, #d97706 0%, #b45309 100%);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.25);
+    }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col antialiased">
 
-  <!-- Top Navigation Bar -->
+  <!-- Header -->
   <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 shadow-md">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16">
@@ -58,11 +49,10 @@
             <h1 class="font-bold text-lg leading-tight tracking-tight flex items-center gap-2">
               AlmoxWMS <span class="bg-emerald-500/20 text-emerald-400 text-xs px-2 py-0.5 rounded border border-emerald-500/30 uppercase tracking-wider font-semibold">Simulador de Aprendizagem</span>
             </h1>
-            <p class="text-xs text-slate-400">Prática Operacional & Diário Reflexivo de Suprimentos</p>
+            <p class="text-xs text-slate-400">Prática Operacional & Palete Virtual de Carga</p>
           </div>
         </div>
 
-        <!-- Instructor Controls -->
         <div class="flex items-center gap-2 sm:gap-3">
           <button onclick="exportReportCSV()" class="inline-flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors shadow-sm" title="Baixar relatório completo da aula">
             <i class="fa-solid fa-file-arrow-down"></i>
@@ -95,8 +85,8 @@
         <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3 flex items-center justify-between">
           <div>
             <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Doca de Entrada</p>
-            <h3 id="statPendingInbound" class="text-xl sm:text-2xl font-bold text-slate-800 mt-0.5">0</h3>
-            <p class="text-[10px] text-slate-400">NFs a conferir</p>
+            <h3 id="statPendingInbound" class="text-xl sm:text-2xl font-bold text-slate-800 mt-0.5">10</h3>
+            <p class="text-[10px] text-slate-400">NFs a auditar</p>
           </div>
           <div class="w-9 h-9 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-base">
             <i class="fa-solid fa-truck-ramp-box"></i>
@@ -107,7 +97,7 @@
           <div>
             <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Expedição (Picking)</p>
             <h3 id="statPendingOutbound" class="text-xl sm:text-2xl font-bold text-slate-800 mt-0.5">0</h3>
-            <p class="text-[10px] text-slate-400">Requisições pendentes</p>
+            <p class="text-[10px] text-slate-400">Ordens pendentes</p>
           </div>
           <div class="w-9 h-9 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-base">
             <i class="fa-solid fa-dolly"></i>
@@ -116,9 +106,9 @@
 
         <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3 flex items-center justify-between">
           <div>
-            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Reflexão Pedagógica</p>
+            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Diário do Aluno</p>
             <h3 id="statReflectionStatus" class="text-xs sm:text-sm font-bold text-amber-600 mt-1">Pendente</h3>
-            <p class="text-[10px] text-slate-400">Síntese do aluno</p>
+            <p class="text-[10px] text-slate-400">Síntese pedagógica</p>
           </div>
           <div class="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-base">
             <i class="fa-solid fa-graduation-cap"></i>
@@ -128,7 +118,7 @@
     </div>
   </section>
 
-  <!-- Main Tabs -->
+  <!-- Main Tabs Navigation -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
     <div class="flex border-b border-slate-200 mb-6 space-x-2 sm:space-x-3 overflow-x-auto">
       <button id="tabBtn1" onclick="switchTab(1)" class="tab-button border-b-2 font-semibold text-sm py-3 px-3 sm:px-4 flex items-center gap-2 transition-all text-emerald-600 border-emerald-600 bg-white rounded-t-lg shadow-sm">
@@ -151,33 +141,33 @@
 
       <button id="tabBtn4" onclick="switchTab(4)" class="tab-button border-b-2 font-medium text-sm py-3 px-3 sm:px-4 flex items-center gap-2 transition-all text-slate-600 border-transparent hover:text-slate-900 hover:border-slate-300">
         <i class="fa-solid fa-pen-nib"></i>
-        <span>4. Síntese & Reflexão do Aluno</span>
+        <span>4. Síntese & Diário de Bordo</span>
         <span id="badgeTab4" class="text-xs px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-bold">Avaliação</span>
       </button>
     </div>
 
-    <!-- TAB 1: RECEBIMENTO CEGO -->
+    <!-- TAB 1: RECEBIMENTO CEGO COM PALETE VIRTUAL -->
     <div id="tabContent1" class="tab-panel space-y-5">
       <div class="bg-gradient-to-r from-emerald-950 via-slate-900 to-slate-900 rounded-xl p-5 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 class="text-xl font-bold flex items-center gap-2">
-            <i class="fa-solid fa-docks"></i> Doca de Recebimento de Mercadorias (10 Cargas Agendadas)
+            <i class="fa-solid fa-docks"></i> Doca de Recebimento de Mercadorias (10 Cargas na Fila)
           </h2>
           <p class="text-sm text-slate-300 mt-1 max-w-2xl">
-            Simulação de <strong>Conferência Cega</strong>: Realize a auditoria física das 10 cargas. O valor da NF está oculto. Fique atento a <strong>sobras, faltas e danos nas embalagens</strong>.
+            Simulação de <strong>Conferência Cega com Palete Virtual</strong>. Abra cada carga, inspecione os volumes desenhados na tela, conte as unidades e verifique se a embalagem está íntegra ou avariada.
           </p>
         </div>
         <div class="bg-white/10 backdrop-blur-sm px-4 py-2.5 rounded-lg border border-white/20 text-xs text-emerald-200 shrink-0">
-          <i class="fa-solid fa-triangle-exclamation mr-1.5 text-amber-400"></i> Há divergências reais misturadas nas cargas!
+          <i class="fa-solid fa-triangle-exclamation mr-1.5 text-amber-400"></i> Há sobras, faltas e danos propositais!
         </div>
       </div>
 
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50">
           <h3 class="font-bold text-slate-800 flex items-center gap-2 text-sm sm:text-base">
-            <i class="fa-solid fa-truck text-slate-500"></i> Fila de Cargas na Doca
+            <i class="fa-solid fa-truck text-slate-500"></i> Cargas Aguardando Auditoria Física
           </h3>
-          <span class="text-xs text-slate-500 font-medium">Clique em "Auditar / Conferência Cega" para iniciar a contagem física</span>
+          <span class="text-xs text-slate-500">Clique no botão verde para inspecionar o Palete Virtual</span>
         </div>
 
         <div class="overflow-x-auto">
@@ -393,7 +383,7 @@
                 1. Importância da Conferência Cega & Impacto das Divergências:
               </label>
               <p class="text-xs text-slate-500 mb-2">
-                Durante a contagem das 10 NFs, você encontrou divergências (sobras, faltas ou avarias). O que teria acontecido com a empresa se você tivesse simplesmente aceitado a nota fiscal sem conferir fisicamente?
+                Durante a contagem das 10 NFs no Palete Virtual, você encontrou divergências (sobras, faltas ou avarias). O que teria acontecido com a empresa se você tivesse simplesmente aceitado a nota fiscal sem conferir fisicamente?
               </p>
               <textarea id="refQuestion1" rows="3" required placeholder="Descreva as consequências financeiras, fiscais e operacionais para a cadeia de suprimentos..." class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500"></textarea>
             </div>
@@ -434,72 +424,130 @@
     </div>
   </main>
 
-  <!-- Blind Modal -->
-  <div id="blindModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">
-      <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
-            <i class="fa-solid fa-clipboard-check"></i>
+  <!-- Blind Modal with Interactive Virtual Pallet (Abordagem 1) -->
+  <div id="blindModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">
+      
+      <!-- Modal Header -->
+      <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-lg">
+            <i class="fa-solid fa-truck-ramp-box"></i>
           </div>
           <div>
-            <h3 class="font-bold text-base">Conferência Cega de Entrada</h3>
-            <p id="blindModalSubtitle" class="text-xs text-slate-400">NF-e #000 - Carga na Doca</p>
+            <h3 class="font-bold text-base flex items-center gap-2">
+              Conferência Cega & Palete Virtual de Carga
+              <span class="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">Doca Externa</span>
+            </h3>
+            <p id="blindModalSubtitle" class="text-xs text-slate-400">NF-e #000 - Fornecedor</p>
           </div>
         </div>
-        <button onclick="closeModal('blindModal')" class="text-slate-400 hover:text-white text-lg">
+        <button onclick="closeModal('blindModal')" class="text-slate-400 hover:text-white text-xl">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
 
-      <div class="p-6 space-y-4">
-        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center gap-4">
-          <div id="blindItemIcon" class="w-14 h-14 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center text-2xl shrink-0">
-            <i class="fa-solid fa-box"></i>
+      <!-- Modal Body (Scrollable) -->
+      <div class="p-6 space-y-6 overflow-y-auto flex-1">
+        
+        <!-- Top Cargo Badge -->
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div id="blindItemIcon" class="w-12 h-12 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center text-xl shrink-0">
+              <i class="fa-solid fa-box"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span id="blindItemSku" class="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider">SKU-0000</span>
+                <span id="blindItemCategory" class="text-[11px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-700">Categoria</span>
+              </div>
+              <h4 id="blindItemDesc" class="font-bold text-slate-900 text-base leading-snug mt-0.5">Nome do Material</h4>
+              <p id="blindItemUnit" class="text-xs text-slate-500">Unidade Física: UN</p>
+            </div>
           </div>
-          <div>
-            <span id="blindItemSku" class="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider">SKU-0000</span>
-            <h4 id="blindItemDesc" class="font-bold text-slate-800 text-base leading-snug">Nome do Material</h4>
-            <p id="blindItemUnit" class="text-xs text-slate-500 mt-1">Unidade de Medida Física: UN</p>
+          <div class="bg-amber-100 border border-amber-300 px-3 py-2 rounded-lg text-xs text-amber-900 font-medium">
+            <i class="fa-solid fa-eye-slash mr-1 text-amber-700"></i> Quantidade da NF Oculta (Conferência Cega)
           </div>
         </div>
 
-        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900 flex items-start gap-2">
-          <i class="fa-solid fa-eye-slash text-amber-600 mt-0.5"></i>
-          <div>
-            <strong>Procedimento Cego:</strong> A quantidade emitida na NF está oculta no sistema. Conte fisicamente o lote recebido do caminhão.
+        <!-- Virtual Pallet Container -->
+        <div class="border-2 border-slate-300 rounded-2xl p-5 bg-gradient-to-b from-slate-100 to-slate-200 shadow-inner">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-4 border-b border-slate-300 gap-2">
+            <div>
+              <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                <i class="fa-solid fa-pallet text-amber-700"></i> Palete Físico Recebido do Caminhão
+              </h4>
+              <p class="text-xs text-slate-500">Clique nas caixas/volumes para marcá-las como auditadas e somar:</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-semibold text-slate-600">Contador Auxiliar:</span>
+              <div class="px-3 py-1 bg-slate-900 text-emerald-400 font-mono font-bold text-sm rounded shadow-sm">
+                <span id="palletClickCounter">0</span> <span id="palletUnitTag">UN</span>
+              </div>
+              <button type="button" onclick="applyPalletCountToInput()" class="px-2.5 py-1 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded font-bold transition-colors" title="Copiar soma do palete para o formulário">
+                Copiar
+              </button>
+            </div>
+          </div>
+
+          <!-- Pallet Grid (Interactive items rendered dynamically) -->
+          <div id="palletGrid" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3 max-h-56 overflow-y-auto p-2">
+            <!-- Dynamically populated packages -->
+          </div>
+
+          <!-- Pallet Base (Wood Graphic) -->
+          <div class="mt-4 pt-2">
+            <div class="pallet-wood h-4 rounded-md w-full flex items-center justify-around px-4">
+              <span class="w-8 h-2 bg-amber-900 rounded-sm"></span>
+              <span class="w-8 h-2 bg-amber-900 rounded-sm"></span>
+              <span class="w-8 h-2 bg-amber-900 rounded-sm"></span>
+            </div>
+            <div class="flex justify-between px-6 text-[10px] text-slate-400 font-mono mt-1">
+              <span>ESTRADO PADRÃO PBR 1000x1200mm</span>
+              <span>CARGA DESCARREGADA NA DOCA</span>
+            </div>
           </div>
         </div>
 
-        <form id="blindForm" onsubmit="submitBlindCount(event)" class="space-y-4">
+        <!-- Packaging Visual Inspection Banner -->
+        <div id="packagingInspectionBanner" class="p-3.5 rounded-xl border flex items-start gap-3 text-xs">
+          <!-- Populated dynamically based on whether load is intact, dented or seal broken -->
+        </div>
+
+        <!-- Form for Counting and Assessment -->
+        <form id="blindForm" onsubmit="submitBlindCount(event)" class="space-y-4 pt-2 border-t border-slate-200">
           <input type="hidden" id="blindInboundId">
           
-          <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-              Quantidade Contada Fisicamente <span class="text-rose-500">*</span>
-            </label>
-            <div class="relative">
-              <input type="number" id="blindInputQty" min="0" step="1" required placeholder="Ex: 50" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-base font-semibold">
-              <span id="blindInputUnitTag" class="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">UN</span>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                Quantidade Contada Fisicamente <span class="text-rose-500">*</span>
+              </label>
+              <div class="relative">
+                <input type="number" id="blindInputQty" min="0" step="1" required placeholder="Digite a soma real dos volumes" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-base font-bold text-slate-900">
+                <span id="blindInputUnitTag" class="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">UN</span>
+              </div>
+              <p class="text-[11px] text-slate-500 mt-1">Baseie-se na contagem física feita no palete acima.</p>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                Estado da Embalagem / Integridade <span class="text-rose-500">*</span>
+              </label>
+              <select id="blindInputPackaging" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm font-semibold">
+                <option value="INTEGRA">Íntegra (Embalagem lacrada, sem danos aparentes)</option>
+                <option value="AVARIADA">Avariada (Molhada, rasgada, amassada ou com vazamento)</option>
+                <option value="VIOLADA">Violada (Fita de segurança rompida / Lacre violado)</option>
+              </select>
+              <p class="text-[11px] text-slate-500 mt-1">Analise o selo visual de inspeção exibido acima.</p>
             </div>
           </div>
 
           <div>
             <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-              Estado da Embalagem / Integridade <span class="text-rose-500">*</span>
+              Observações do Almoxarife / Apontamento de Divergência
             </label>
-            <select id="blindInputPackaging" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
-              <option value="INTEGRA">Íntegra (Embalagem lacrada, sem danos)</option>
-              <option value="AVARIADA">Avariada (Molhada, rasgada, amassada)</option>
-              <option value="VIOLADA">Violada (Lacre rompido ou ausente)</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-              Observações do Almoxarife / Apontamento de Ocorrência
-            </label>
-            <textarea id="blindInputNotes" rows="2" placeholder="Descreva qualquer anomalia física, divergência aparente de lote ou avaria..." class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500"></textarea>
+            <textarea id="blindInputNotes" rows="2" placeholder="Se você notou qualquer anomalia física, divergência aparente de lote ou dano, registre aqui para se resguardar..." class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500"></textarea>
           </div>
 
           <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
@@ -507,7 +555,7 @@
               Cancelar
             </button>
             <button type="submit" class="px-5 py-2 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors shadow-md flex items-center gap-2">
-              <i class="fa-solid fa-check-double"></i> Confirmar Conferência
+              <i class="fa-solid fa-check-double"></i> Confirmar Conferência da Carga
             </button>
           </div>
         </form>
@@ -515,7 +563,7 @@
     </div>
   </div>
 
-  <!-- Slotting Modal -->
+  <!-- Slotting Modal (Put-Away) -->
   <div id="slottingModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
       <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
@@ -635,7 +683,7 @@
     </div>
   </div>
 
-  <!-- Dispatch Modal -->
+  <!-- Dispatch Modal (Picking / Outbound) -->
   <div id="dispatchModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
       <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
@@ -727,7 +775,7 @@
     </div>
   </div>
 
-  <!-- Result Modal -->
+  <!-- Notification / Result Modal -->
   <div id="resultModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-150">
       <div id="resultModalHeader" class="px-6 py-4 flex items-center gap-3 text-white bg-emerald-600">
@@ -738,18 +786,19 @@
         <div id="resultModalBody" class="text-sm text-slate-700 space-y-2"></div>
         <div class="pt-2 text-right">
           <button onclick="closeModal('resultModal')" class="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg transition-colors text-sm">
-            Entendido / Próxima Etapa
+            Entendido / Continuar Turno
           </button>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- Footer -->
   <footer class="bg-slate-900 border-t border-slate-800 text-slate-400 text-xs py-4">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
       <div>
         <span>Simulador de Almoxarifado Integrado & WMS</span> &bull; 
-        <span class="text-slate-300">10 Cargas na Doca &bull; 3 Aulas de Operações Logísticas</span>
+        <span class="text-slate-300">10 Cargas &bull; Palete Virtual de Doca &bull; 3 Aulas Práticas</span>
       </div>
       <div class="flex items-center gap-4 text-slate-400">
         <span><i class="fa-solid fa-database text-emerald-400 mr-1"></i> Armazenamento Local Ativo</span>
@@ -758,10 +807,11 @@
     </div>
   </footer>
 
+  <!-- Application Script -->
   <script>
-    const STORAGE_KEY = 'ALMOX_SIMULATOR_STATE_V2';
+    const STORAGE_KEY = 'ALMOX_SIMULATOR_STATE_V3';
 
-    // 10 Detailed Inbound Orders with Pedagogical Traps (Divergences)
+    // 10 Detailed Inbound Orders with Virtual Pallet Visual Configurations
     const DEFAULT_DATA = {
       studentReflection: {
         nome: '',
@@ -788,7 +838,15 @@
           discrepancyNotes: '',
           status: 'PENDENTE',
           divergenciaDetectada: false,
-          createdDate: '10/03/2026 08:15'
+          createdDate: '10/03/2026 08:15',
+          visualPallet: {
+            packageCount: 5,
+            qtyPerPackage: 10,
+            packageLabel: 'Fardo c/ 10 pares',
+            visualType: 'box',
+            packagingCondition: 'INTEGRA',
+            defectNote: null
+          }
         },
         {
           id: 'INB-102',
@@ -799,13 +857,30 @@
           categoria: 'Insumos',
           icon: 'fa-screwdriver',
           unidade: 'CENTO',
-          expectedQty: 100, // Carga física tem 95 (Divergência de Falta proposital)
+          expectedQty: 100, // Carga física tem 95 (Divergência de Falta: 9 caixas de 10 e 1 de 5)
           countedQty: null,
           packagingStatus: null,
           discrepancyNotes: '',
           status: 'PENDENTE',
           divergenciaDetectada: false,
-          createdDate: '10/03/2026 08:45'
+          createdDate: '10/03/2026 08:45',
+          visualPallet: {
+            customPackages: [
+              { label: 'Cx 01: 10 centos', qty: 10 },
+              { label: 'Cx 02: 10 centos', qty: 10 },
+              { label: 'Cx 03: 10 centos', qty: 10 },
+              { label: 'Cx 04: 10 centos', qty: 10 },
+              { label: 'Cx 05: 10 centos', qty: 10 },
+              { label: 'Cx 06: 10 centos', qty: 10 },
+              { label: 'Cx 07: 10 centos', qty: 10 },
+              { label: 'Cx 08: 10 centos', qty: 10 },
+              { label: 'Cx 09: 10 centos', qty: 10 },
+              { label: 'Cx 10: 5 centos (INCOMPLETA)', qty: 5, alert: true }
+            ],
+            visualType: 'box',
+            packagingCondition: 'INTEGRA',
+            defectNote: null
+          }
         },
         {
           id: 'INB-103',
@@ -818,11 +893,19 @@
           unidade: 'BD',
           expectedQty: 12,
           countedQty: null,
-          packagingStatus: null, // Teste: Aluno deve apontar embalagem avariada/amassada
+          packagingStatus: null,
           discrepancyNotes: '',
           status: 'PENDENTE',
           divergenciaDetectada: false,
-          createdDate: '10/03/2026 09:10'
+          createdDate: '10/03/2026 09:10',
+          visualPallet: {
+            packageCount: 12,
+            qtyPerPackage: 1,
+            packageLabel: 'Balde 20L',
+            visualType: 'drum',
+            packagingCondition: 'AVARIADA',
+            defectNote: 'Alerta Visual: 2 baldes amassados no fundo com manchas de vazamento visíveis na madeira do estrado.'
+          }
         },
         {
           id: 'INB-104',
@@ -839,7 +922,15 @@
           discrepancyNotes: '',
           status: 'PENDENTE',
           divergenciaDetectada: false,
-          createdDate: '10/03/2026 09:30'
+          createdDate: '10/03/2026 09:30',
+          visualPallet: {
+            packageCount: 8,
+            qtyPerPackage: 1,
+            packageLabel: 'Estojo Individual',
+            visualType: 'case',
+            packagingCondition: 'INTEGRA',
+            defectNote: null
+          }
         },
         {
           id: 'INB-105',
@@ -856,7 +947,15 @@
           discrepancyNotes: '',
           status: 'PENDENTE',
           divergenciaDetectada: false,
-          createdDate: '10/03/2026 09:50'
+          createdDate: '10/03/2026 09:50',
+          visualPallet: {
+            packageCount: 5,
+            qtyPerPackage: 5,
+            packageLabel: 'Fardo c/ 5 Caixas',
+            visualType: 'box',
+            packagingCondition: 'INTEGRA',
+            defectNote: null
+          }
         },
         {
           id: 'INB-106',
@@ -867,13 +966,29 @@
           categoria: 'Insumos',
           icon: 'fa-compact-disc',
           unidade: 'UN',
-          expectedQty: 200, // Carga física virá com 210 (Divergência de Sobra proposital)
+          expectedQty: 200, // Carga física tem 210 (Divergência de Sobra: 8 tubos de 25 + 1 tubo avulso de 10)
           countedQty: null,
           packagingStatus: null,
           discrepancyNotes: '',
           status: 'PENDENTE',
           divergenciaDetectada: false,
-          createdDate: '10/03/2026 10:15'
+          createdDate: '10/03/2026 10:15',
+          visualPallet: {
+            customPackages: [
+              { label: 'Tubo 01: 25 un', qty: 25 },
+              { label: 'Tubo 02: 25 un', qty: 25 },
+              { label: 'Tubo 03: 25 un', qty: 25 },
+              { label: 'Tubo 04: 25 un', qty: 25 },
+              { label: 'Tubo 05: 25 un', qty: 25 },
+              { label: 'Tubo 06: 25 un', qty: 25 },
+              { label: 'Tubo 07: 25 un', qty: 25 },
+              { label: 'Tubo 08: 25 un', qty: 25 },
+              { label: 'Tubo 09: 10 un (EXTRA)', qty: 10, alert: true }
+            ],
+            visualType: 'box',
+            packagingCondition: 'INTEGRA',
+            defectNote: null
+          }
         },
         {
           id: 'INB-107',
@@ -890,7 +1005,15 @@
           discrepancyNotes: '',
           status: 'PENDENTE',
           divergenciaDetectada: false,
-          createdDate: '10/03/2026 10:40'
+          createdDate: '10/03/2026 10:40',
+          visualPallet: {
+            packageCount: 6,
+            qtyPerPackage: 10,
+            packageLabel: 'Caixa c/ 10 un',
+            visualType: 'box',
+            packagingCondition: 'INTEGRA',
+            defectNote: null
+          }
         },
         {
           id: 'INB-108',
@@ -903,11 +1026,19 @@
           unidade: 'GL',
           expectedQty: 20,
           countedQty: null,
-          packagingStatus: null, // Teste: Aluno deve atentar para Lacre Rompido / Violado
+          packagingStatus: null,
           discrepancyNotes: '',
           status: 'PENDENTE',
           divergenciaDetectada: false,
-          createdDate: '10/03/2026 11:00'
+          createdDate: '10/03/2026 11:00',
+          visualPallet: {
+            packageCount: 20,
+            qtyPerPackage: 1,
+            packageLabel: 'Bombona 5L',
+            visualType: 'drum',
+            packagingCondition: 'VIOLADA',
+            defectNote: 'Alerta Visual: Lacre térmico da tampa rompido e fita gomada de segurança cortada.'
+          }
         },
         {
           id: 'INB-109',
@@ -918,13 +1049,21 @@
           categoria: 'Insumos',
           icon: 'fa-tape',
           unidade: 'RL',
-          expectedQty: 40, // Carga física tem 35 (Divergência de Falta proposital)
+          expectedQty: 40, // Carga física tem 35 (Divergência de Falta: 7 pacotes de 5)
           countedQty: null,
           packagingStatus: null,
           discrepancyNotes: '',
           status: 'PENDENTE',
           divergenciaDetectada: false,
-          createdDate: '10/03/2026 11:20'
+          createdDate: '10/03/2026 11:20',
+          visualPallet: {
+            packageCount: 7,
+            qtyPerPackage: 5,
+            packageLabel: 'Pack Termoencolhível c/ 5 rolos',
+            visualType: 'box',
+            packagingCondition: 'INTEGRA',
+            defectNote: null
+          }
         },
         {
           id: 'INB-110',
@@ -941,7 +1080,15 @@
           discrepancyNotes: '',
           status: 'PENDENTE',
           divergenciaDetectada: false,
-          createdDate: '10/03/2026 11:45'
+          createdDate: '10/03/2026 11:45',
+          visualPallet: {
+            packageCount: 3,
+            qtyPerPackage: 5,
+            packageLabel: 'Feixe c/ 5 correias',
+            visualType: 'box',
+            packagingCondition: 'INTEGRA',
+            defectNote: null
+          }
         }
       ],
       inventory: [
@@ -1059,6 +1206,7 @@
     };
 
     let state = null;
+    let currentPalletCount = 0;
 
     function loadState() {
       try {
@@ -1090,7 +1238,7 @@
       showResultModal(
         "Reiniciar Simulador da Aula",
         `<div class="space-y-3">
-          <p>Você tem certeza que deseja resetar os dados locais e carregar novamente as 10 notas fiscais para um novo turno/aula?</p>
+          <p>Deseja zerar os registros locais e recarregar as 10 notas fiscais com paletes virtuais para um novo turno ou outra turma?</p>
           <div class="flex gap-2 justify-end pt-2">
             <button onclick="closeModal('resultModal')" class="px-3 py-1.5 bg-slate-200 text-slate-800 rounded font-medium text-xs">Cancelar</button>
             <button onclick="executeResetSimulation()" class="px-3 py-1.5 bg-rose-600 text-white rounded font-bold text-xs">Sim, Reiniciar Base</button>
@@ -1104,7 +1252,7 @@
       state = JSON.parse(JSON.stringify(DEFAULT_DATA));
       saveState();
       closeModal('resultModal');
-      showResultModal("Simulador Reiniciado", "As 10 notas fiscais originais foram recarregadas na doca. Bom treinamento!", "success");
+      showResultModal("Simulador Reiniciado", "As 10 notas fiscais e paletes virtuais foram recarregados com sucesso. Bom turno!", "success");
     }
 
     function switchTab(tabIndex) {
@@ -1141,7 +1289,6 @@
       document.getElementById('statPendingOutbound').innerText = pendingOutbound;
       document.getElementById('badgeTab3').innerText = pendingOutbound;
 
-      // Reflection indicator
       const refStatusElem = document.getElementById('statReflectionStatus');
       const badgeTab4 = document.getElementById('badgeTab4');
       if (state.studentReflection && state.studentReflection.salvoEm) {
@@ -1170,10 +1317,10 @@
 
         if (item.status === 'PENDENTE') {
           statusBadge = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
-            <i class="fa-solid fa-clock-rotate-left mr-1"></i> Aguardando Doca
+            <i class="fa-solid fa-clock-rotate-left mr-1"></i> Na Doca (Aguardando)
           </span>`;
           actionBtn = `<button onclick="openBlindModal('${item.id}')" class="px-3 py-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors shadow-xs flex items-center gap-1.5 ml-auto">
-            <i class="fa-solid fa-list-check"></i> Auditar / Conferência Cega
+            <i class="fa-solid fa-boxes-packing"></i> Auditar Palete Virtual
           </button>`;
         } else if (item.status === 'CONFERIDO') {
           const divStyle = item.divergenciaDetectada ? 'bg-rose-100 text-rose-800 border-rose-200' : 'bg-blue-100 text-blue-800 border-blue-200';
@@ -1186,7 +1333,7 @@
           </button>`;
         } else if (item.status === 'ENDERECADO') {
           statusBadge = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-            <i class="fa-solid fa-boxes-packing mr-1"></i> Estocado no WMS
+            <i class="fa-solid fa-circle-check mr-1 text-emerald-600"></i> Estocado no WMS
           </span>`;
           actionBtn = `<span class="text-xs text-slate-400 font-medium italic">Processo Finalizado</span>`;
         }
@@ -1224,8 +1371,10 @@
       document.getElementById('blindModalSubtitle').innerText = `${item.nf} - Fornecedor: ${item.fornecedor}`;
       document.getElementById('blindItemSku').innerText = item.sku;
       document.getElementById('blindItemDesc').innerText = item.descricao;
-      document.getElementById('blindItemUnit').innerText = `Unidade de Medida Física: ${item.unidade}`;
+      document.getElementById('blindItemCategory').innerText = item.categoria;
+      document.getElementById('blindItemUnit').innerText = `Unidade Física de Medida: ${item.unidade}`;
       document.getElementById('blindInputUnitTag').innerText = item.unidade;
+      document.getElementById('palletUnitTag').innerText = item.unidade;
 
       const iconContainer = document.getElementById('blindItemIcon');
       iconContainer.innerHTML = `<i class="fa-solid ${item.icon || 'fa-box'}"></i>`;
@@ -1234,7 +1383,130 @@
       document.getElementById('blindInputPackaging').value = 'INTEGRA';
       document.getElementById('blindInputNotes').value = '';
 
+      // Render Virtual Pallet (Abordagem 1)
+      currentPalletCount = 0;
+      document.getElementById('palletClickCounter').innerText = '0';
+      renderVirtualPallet(item);
+
+      // Render Visual Packaging Inspection Banner
+      renderPackagingBanner(item);
+
       openModal('blindModal');
+    }
+
+    function renderVirtualPallet(item) {
+      const palletGrid = document.getElementById('palletGrid');
+      palletGrid.innerHTML = '';
+
+      const pConfig = item.visualPallet || { packageCount: 5, qtyPerPackage: 10, packageLabel: 'Caixa', visualType: 'box' };
+
+      let packages = [];
+      if (pConfig.customPackages && pConfig.customPackages.length > 0) {
+        packages = pConfig.customPackages;
+      } else {
+        for (let i = 1; i <= pConfig.packageCount; i++) {
+          packages.push({
+            label: `${pConfig.packageLabel} #${i}`,
+            qty: pConfig.qtyPerPackage,
+            alert: false
+          });
+        }
+      }
+
+      packages.forEach((pkg, index) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.dataset.qty = pkg.qty;
+        btn.dataset.counted = 'false';
+
+        let iconClass = 'fa-box';
+        if (pConfig.visualType === 'drum') iconClass = 'fa-oil-can';
+        if (pConfig.visualType === 'case') iconClass = 'fa-briefcase';
+
+        btn.className = `p-2.5 rounded-xl border flex flex-col items-center justify-center text-center transition-all bg-white border-slate-300 hover:border-emerald-500 shadow-xs group`;
+
+        btn.innerHTML = `
+          <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center text-sm mb-1 group-hover:scale-105 transition-transform">
+            <i class="fa-solid ${iconClass}"></i>
+          </div>
+          <span class="text-[11px] font-bold text-slate-800 leading-tight">${pkg.label}</span>
+          <span class="text-[10px] text-slate-500 font-mono mt-0.5">${pkg.qty} ${item.unidade}</span>
+          <span class="check-indicator text-[10px] font-bold text-slate-400 mt-1 flex items-center gap-1">
+            <i class="fa-regular fa-circle"></i> Contar
+          </span>
+        `;
+
+        btn.onclick = () => {
+          const isCounted = btn.dataset.counted === 'true';
+          if (!isCounted) {
+            btn.dataset.counted = 'true';
+            btn.classList.remove('bg-white', 'border-slate-300');
+            btn.classList.add('bg-emerald-50', 'border-emerald-500', 'ring-2', 'ring-emerald-400/50');
+            btn.querySelector('.check-indicator').innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600"></i> Auditado`;
+            btn.querySelector('.check-indicator').classList.remove('text-slate-400');
+            btn.querySelector('.check-indicator').classList.add('text-emerald-700');
+            currentPalletCount += Number(pkg.qty);
+          } else {
+            btn.dataset.counted = 'false';
+            btn.classList.remove('bg-emerald-50', 'border-emerald-500', 'ring-2', 'ring-emerald-400/50');
+            btn.classList.add('bg-white', 'border-slate-300');
+            btn.querySelector('.check-indicator').innerHTML = `<i class="fa-regular fa-circle"></i> Contar`;
+            btn.querySelector('.check-indicator').classList.remove('text-emerald-700');
+            btn.querySelector('.check-indicator').classList.add('text-slate-400');
+            currentPalletCount -= Number(pkg.qty);
+          }
+          document.getElementById('palletClickCounter').innerText = currentPalletCount;
+        };
+
+        palletGrid.appendChild(btn);
+      });
+    }
+
+    function applyPalletCountToInput() {
+      document.getElementById('blindInputQty').value = currentPalletCount;
+    }
+
+    function renderPackagingBanner(item) {
+      const banner = document.getElementById('packagingInspectionBanner');
+      const condition = item.visualPallet?.packagingCondition || 'INTEGRA';
+      const defectNote = item.visualPallet?.defectNote;
+
+      if (condition === 'AVARIADA') {
+        banner.className = "p-3.5 rounded-xl border bg-rose-50 border-rose-300 text-rose-950 flex items-start gap-3 text-xs";
+        banner.innerHTML = `
+          <div class="w-7 h-7 rounded-lg bg-rose-200 text-rose-700 flex items-center justify-center text-sm shrink-0">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+          <div>
+            <strong class="font-bold text-rose-900 block text-xs">INSPEÇÃO VISUAL: AVARIA DETECTADA NA CARGA!</strong>
+            <p class="text-rose-800 mt-0.5">${defectNote || 'Volumes com avarias aparentes, amassamento estrutural e danos mecânicos visíveis.'}</p>
+            <p class="text-[11px] font-semibold text-rose-700 mt-1">Atenção aluno: Ajuste o campo "Estado da Embalagem" para AVARIADA!</p>
+          </div>
+        `;
+      } else if (condition === 'VIOLADA') {
+        banner.className = "p-3.5 rounded-xl border bg-amber-50 border-amber-300 text-amber-950 flex items-start gap-3 text-xs";
+        banner.innerHTML = `
+          <div class="w-7 h-7 rounded-lg bg-amber-200 text-amber-800 flex items-center justify-center text-sm shrink-0">
+            <i class="fa-solid fa-unlock-keyhole"></i>
+          </div>
+          <div>
+            <strong class="font-bold text-amber-900 block text-xs">INSPEÇÃO VISUAL: LACRE VIOLADO / NÃO CONFORMIDADE!</strong>
+            <p class="text-amber-800 mt-0.5">${defectNote || 'Fita de lacre rompida ou ausente. Risco de adulteração do produto.'}</p>
+            <p class="text-[11px] font-semibold text-amber-800 mt-1">Atenção aluno: Ajuste o campo "Estado da Embalagem" para VIOLADA!</p>
+          </div>
+        `;
+      } else {
+        banner.className = "p-3 rounded-xl border bg-emerald-50 border-emerald-300 text-emerald-950 flex items-start gap-3 text-xs";
+        banner.innerHTML = `
+          <div class="w-7 h-7 rounded-lg bg-emerald-200 text-emerald-800 flex items-center justify-center text-sm shrink-0">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div>
+            <strong class="font-bold text-emerald-900 block text-xs">INSPEÇÃO VISUAL: EMBALAGEM ÍNTEGRA E LACRADA</strong>
+            <p class="text-emerald-800 mt-0.5">Sem amassados, estufamentos, vazamentos ou fitas violadas. Carga em conformidade física.</p>
+          </div>
+        `;
+      }
     }
 
     function submitBlindCount(event) {
@@ -1276,7 +1548,7 @@
         resultHtml = `
           <div class="bg-emerald-50 border border-emerald-200 text-emerald-900 p-3 rounded-lg">
             <p class="font-bold text-sm"><i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i> Conferência Validada sem Divergências!</p>
-            <p class="text-xs mt-1">A quantidade contada (<strong>${counted} ${item.unidade}</strong>) confere rigorosamente com a Nota Fiscal e a embalagem estava íntegra.</p>
+            <p class="text-xs mt-1">A quantidade contada no palete virtual (<strong>${counted} ${item.unidade}</strong>) confere rigorosamente com a Nota Fiscal e a embalagem estava íntegra.</p>
           </div>
           <p class="text-xs text-slate-600">O lote foi movido para a <strong>Aba 2 (Armazenagem & WMS)</strong> para receber endereço físico.</p>
         `;
@@ -1284,21 +1556,21 @@
       } else {
         let issues = [];
         if (hasQtyDiscrepancy) {
-          const motivo = diff > 0 ? `Sobra física de +${diff} ${item.unidade}` : `Falta de -${Math.abs(diff)} ${item.unidade}`;
-          issues.push(`<strong>Divergência Quantitativa:</strong> NF indicava ${item.expectedQty} ${item.unidade}, mas foram contados ${counted} ${item.unidade} (${motivo}).`);
+          const motivo = diff > 0 ? `Sobra física de +${diff} ${item.unidade}` : `Falta física de -${Math.abs(diff)} ${item.unidade}`;
+          issues.push(`<strong>Divergência Quantitativa:</strong> NF indicava ${item.expectedQty} ${item.unidade}, mas o palete físico continha ${counted} ${item.unidade} (${motivo}).`);
         }
         if (hasPackagingDamage) {
-          issues.push(`<strong>Problema de Embalagem:</strong> Classificada como "${packaging}".`);
+          issues.push(`<strong>Problema de Embalagem:</strong> Apontado como "${packaging}".`);
         }
 
         resultHtml = `
           <div class="bg-rose-50 border border-rose-200 text-rose-900 p-3 rounded-lg space-y-2">
-            <p class="font-bold text-sm"><i class="fa-solid fa-triangle-exclamation text-rose-600 mr-1"></i> Ocorrência Detectada na Carga!</p>
+            <p class="font-bold text-sm"><i class="fa-solid fa-triangle-exclamation text-rose-600 mr-1"></i> Ocorrência Detectada com Sucesso!</p>
             <ul class="text-xs space-y-1 list-disc pl-4">
               ${issues.map(msg => `<li>${msg}</li>`).join('')}
             </ul>
           </div>
-          <p class="text-xs text-slate-600">Excelente olho clínico! O apontamento da ocorrência resguarda a empresa contra prejuízos fiscais e de garantia. A quantidade contada fisicamente (${counted}) seguirá para alocação.</p>
+          <p class="text-xs text-slate-600">Excelente olho clínico! O apontamento da divergência resguarda a empresa contra prejuízos financeiros e contaminação. A quantidade real (${counted} ${item.unidade}) seguirá para alocação.</p>
         `;
         showResultModal("Divergência Registrada", resultHtml, "warning");
       }
@@ -1727,7 +1999,7 @@
       );
     }
 
-    // Comprehensive CSV Export with Student Reflection
+    // CSV Export
     function exportReportCSV() {
       if (!state) return;
 
