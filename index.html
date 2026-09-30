@@ -1,0 +1,1638 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulador de Almoxarifado & WMS Educacional</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Inter Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              800: '#166534',
+              900: '#14532d',
+            },
+            wms: {
+              dark: '#0f172a',
+              card: '#1e293b',
+              accent: '#3b82f6',
+              warning: '#f59e0b',
+              danger: '#ef4444'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Custom Scrollbar & Utility Styles -->
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    .badge-pulse {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .5; }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col antialiased">
+
+  <!-- Top Navigation Bar -->
+  <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo and System Title -->
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-lg bg-emerald-500 flex items-center justify-center text-slate-900 font-extrabold text-xl shadow-lg">
+            <i class="fa-solid fa-boxes-stacked"></i>
+          </div>
+          <div>
+            <h1 class="font-bold text-lg leading-tight tracking-tight flex items-center gap-2">
+              AlmoxWMS <span class="bg-emerald-500/20 text-emerald-400 text-xs px-2 py-0.5 rounded border border-emerald-500/30 uppercase tracking-wider font-semibold">Simulador Prático</span>
+            </h1>
+            <p class="text-xs text-slate-400">Ambiente de Treinamento e Operações Logísticas</p>
+          </div>
+        </div>
+
+        <!-- Instructor / Action Controls -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          <button onclick="exportReportCSV()" class="inline-flex items-center gap-2 px-3 py-1.5 text-xs sm:text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg transition-colors shadow-sm" title="Baixar relatório para avaliação">
+            <i class="fa-solid fa-file-arrow-down text-emerald-400"></i>
+            <span class="hidden sm:inline">Exportar Relatório</span>
+          </button>
+          <button onclick="promptResetSimulation()" class="inline-flex items-center gap-2 px-3 py-1.5 text-xs sm:text-sm font-medium bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/60 rounded-lg transition-colors shadow-sm" title="Reiniciar base de dados para nova aula">
+            <i class="fa-solid fa-rotate-right text-rose-400"></i>
+            <span class="hidden sm:inline">Reiniciar Aula</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="bg-white border-b border-slate-200 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <!-- Metric 1: Itens em Estoque -->
+        <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3 sm:p-4 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Saldo Geral</p>
+            <h3 id="statTotalStock" class="text-xl sm:text-2xl font-bold text-slate-800 mt-1">0</h3>
+            <p class="text-[11px] text-slate-400 mt-0.5">Unidades armazenadas</p>
+          </div>
+          <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-cubes"></i>
+          </div>
+        </div>
+
+        <!-- Metric 2: Pedidos na Doca -->
+        <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3 sm:p-4 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Doca de Entrada</p>
+            <h3 id="statPendingInbound" class="text-xl sm:text-2xl font-bold text-slate-800 mt-1">0</h3>
+            <p class="text-[11px] text-slate-400 mt-0.5">Cargas a conferir</p>
+          </div>
+          <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-truck-ramp-box"></i>
+          </div>
+        </div>
+
+        <!-- Metric 3: Requisições Pendentes -->
+        <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3 sm:p-4 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Expedição</p>
+            <h3 id="statPendingOutbound" class="text-xl sm:text-2xl font-bold text-slate-800 mt-1">0</h3>
+            <p class="text-[11px] text-slate-400 mt-0.5">Requisições na fila</p>
+          </div>
+          <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-dolly"></i>
+          </div>
+        </div>
+
+        <!-- Metric 4: Alertas de Ponto de Pedido -->
+        <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3 sm:p-4 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Estoque Crítico</p>
+            <h3 id="statCriticalStock" class="text-xl sm:text-2xl font-bold text-rose-600 mt-1">0</h3>
+            <p class="text-[11px] text-slate-400 mt-0.5">Abaixo do mínimo</p>
+          </div>
+          <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
+    <!-- Tab Controls -->
+    <div class="flex border-b border-slate-200 mb-6 space-x-2 sm:space-x-4 overflow-x-auto">
+      <button id="tabBtn1" onclick="switchTab(1)" class="tab-button border-b-2 font-semibold text-sm sm:text-base py-3 px-3 sm:px-5 flex items-center gap-2 transition-all text-emerald-600 border-emerald-600 bg-white rounded-t-lg shadow-sm">
+        <i class="fa-solid fa-clipboard-check"></i>
+        <span>1. Recebimento & Conferência Cega</span>
+        <span id="badgeTab1" class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold">0</span>
+      </button>
+
+      <button id="tabBtn2" onclick="switchTab(2)" class="tab-button border-b-2 font-medium text-sm sm:text-base py-3 px-3 sm:px-5 flex items-center gap-2 transition-all text-slate-600 border-transparent hover:text-slate-900 hover:border-slate-300">
+        <i class="fa-solid fa-warehouse"></i>
+        <span>2. Armazenagem & WMS</span>
+        <span id="badgeTab2" class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold">0</span>
+      </button>
+
+      <button id="tabBtn3" onclick="switchTab(3)" class="tab-button border-b-2 font-medium text-sm sm:text-base py-3 px-3 sm:px-5 flex items-center gap-2 transition-all text-slate-600 border-transparent hover:text-slate-900 hover:border-slate-300">
+        <i class="fa-solid fa-share-from-square"></i>
+        <span>3. Expedição & Baixas (Kardex)</span>
+        <span id="badgeTab3" class="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold">0</span>
+      </button>
+    </div>
+
+    <div id="tabContent1" class="tab-panel space-y-6">
+      <div class="bg-gradient-to-r from-emerald-900 to-slate-900 rounded-xl p-5 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold flex items-center gap-2">
+            <i class="fa-solid fa-docks"></i> Doca de Recebimento de Mercadorias
+          </h2>
+          <p class="text-sm text-slate-300 mt-1 max-w-2xl">
+            Simulação da <strong>Conferência Cega</strong>: O almoxarife deve contar fisicamente cada item que desce do caminhão sem saber previamente o número exato da NF. Divergências e embalagens avariadas devem ser apontadas.
+          </p>
+        </div>
+        <div class="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/20 text-xs text-emerald-200">
+          <i class="fa-solid fa-circle-info mr-1"></i> Regra de Ouro: Registre avarias antes do aceite.
+        </div>
+      </div>
+
+      <!-- Inbound Orders Table -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50">
+          <h3 class="font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-truck text-slate-500"></i> Notas Fiscais Aguardando Conferência
+          </h3>
+          <span class="text-xs text-slate-500 font-medium">Clique em "Iniciar Conferência Cega" para auditar a carga</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-slate-100 text-slate-600 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">
+              <tr>
+                <th class="py-3 px-4">Nota Fiscal / Data</th>
+                <th class="py-3 px-4">Fornecedor</th>
+                <th class="py-3 px-4">Produto & SKU</th>
+                <th class="py-3 px-4">Und. Medida</th>
+                <th class="py-3 px-4 text-center">Status</th>
+                <th class="py-3 px-4 text-right">Ação</th>
+              </tr>
+            </thead>
+            <tbody id="inboundTableBody" class="divide-y divide-slate-200 text-slate-700">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="tabContent2" class="tab-panel hidden space-y-6">
+      <div class="bg-gradient-to-r from-slate-900 to-blue-950 rounded-xl p-5 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold flex items-center gap-2">
+            <i class="fa-solid fa-map-location-dot text-blue-400"></i> Endereçamento Logístico e Saldo em Estoque (WMS)
+          </h2>
+          <p class="text-sm text-slate-300 mt-1 max-w-2xl">
+            Mercadorias conferidas precisam ser alocadas em seus devidos endereços técnicos: <strong>Rua - Módulo/Prateleira - Nível</strong> de acordo com sua categoria funcional.
+          </p>
+        </div>
+        <div class="bg-blue-500/20 backdrop-blur-sm px-4 py-2 rounded-lg border border-blue-400/30 text-xs text-blue-200">
+          <i class="fa-solid fa-tags mr-1"></i> Formato de Endereço: <code>[RUA]-[MÓDULO]-[NÍVEL]</code>
+        </div>
+      </div>
+
+      <!-- Pending Put-Away Section (Itens que acabaram de ser conferidos e aguardam guarda) -->
+      <div id="pendingPutAwayCard" class="bg-amber-50/70 border border-amber-200 rounded-xl p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-bold text-amber-950 flex items-center gap-2">
+            <i class="fa-solid fa-box-open text-amber-600"></i> Lotes Aguardando Endereçamento Físico (Put-Away)
+          </h3>
+          <span id="putAwayCountBadge" class="bg-amber-200 text-amber-900 text-xs font-bold px-2.5 py-1 rounded-full">0 itens</span>
+        </div>
+        <div id="pendingPutAwayList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Dynamically populated cards of items ready to be slotted -->
+        </div>
+      </div>
+
+      <!-- Main WMS Inventory Table -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="p-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50">
+          <div class="flex items-center gap-2">
+            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+              <i class="fa-solid fa-list-check text-slate-500"></i> Inventário Físico & Endereçamento Cadastrado
+            </h3>
+          </div>
+          <!-- Filters and Search -->
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="relative">
+              <input type="text" id="inventorySearch" oninput="renderInventoryTable()" placeholder="Buscar SKU ou Produto..." class="pl-8 pr-3 py-1.5 text-xs sm:text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-44 sm:w-56">
+              <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-xs text-slate-400"></i>
+            </div>
+            <select id="categoryFilter" onchange="renderInventoryTable()" class="py-1.5 px-3 text-xs sm:text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="ALL">Todas as Categorias</option>
+              <option value="EPIs">EPIs e Uniformes</option>
+              <option value="Ferramentas">Ferramentas e Instrumentos</option>
+              <option value="Insumos">Insumos Operacionais</option>
+              <option value="Peças">Peças de Reposição</option>
+              <option value="Químicos">Produtos Químicos / Lubrificantes</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-slate-100 text-slate-600 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">
+              <tr>
+                <th class="py-3 px-4">SKU / Item</th>
+                <th class="py-3 px-4">Categoria</th>
+                <th class="py-3 px-4">Endereço WMS</th>
+                <th class="py-3 px-4 text-center">Saldo Atual</th>
+                <th class="py-3 px-4 text-center">Est. Mínimo</th>
+                <th class="py-3 px-4 text-center">Status Estoque</th>
+                <th class="py-3 px-4 text-right">Lote / Validade</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryTableBody" class="divide-y divide-slate-200 text-slate-700">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="tabContent3" class="tab-panel hidden space-y-6">
+      <div class="bg-gradient-to-r from-indigo-950 to-slate-900 rounded-xl p-5 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold flex items-center gap-2">
+            <i class="fa-solid fa-people-carry-box text-indigo-400"></i> Expedição, Baixas e Atendimento de Requisições
+          </h2>
+          <p class="text-sm text-slate-300 mt-1 max-w-2xl">
+            Atenda os pedidos internos das frentes de trabalho. Realize o <strong>Picking</strong> localizando a peça pelo seu endereço de estoque e dê a baixa no sistema com registro de matrícula e setor.
+          </p>
+        </div>
+        <div class="bg-indigo-500/20 backdrop-blur-sm px-4 py-2 rounded-lg border border-indigo-400/30 text-xs text-indigo-200">
+          <i class="fa-solid fa-bell mr-1"></i> Cada saída registra movimentação no Kardex.
+        </div>
+      </div>
+
+      <!-- Pending Orders from Work Centers -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50">
+          <h3 class="font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-clipboard-list text-slate-500"></i> Ordens de Requisição Interna (Aguardando Atendimento)
+          </h3>
+          <span class="text-xs text-slate-500">Verifique o endereço WMS de armazenagem antes de efetuar o picking</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-slate-100 text-slate-600 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">
+              <tr>
+                <th class="py-3 px-4">Nº Req / Setor Solicitante</th>
+                <th class="py-3 px-4">Item Solicitado</th>
+                <th class="py-3 px-4 text-center">Qtd. Solicitada</th>
+                <th class="py-3 px-4">Endereço de Retirada (Picking)</th>
+                <th class="py-3 px-4 text-center">Saldo em Estoque</th>
+                <th class="py-3 px-4 text-right">Ação</th>
+              </tr>
+            </thead>
+            <tbody id="outboundTableBody" class="divide-y divide-slate-200 text-slate-700">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Kardex / Transaction Audit Log -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+          <h3 class="font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-clock-rotate-left text-slate-500"></i> Registro de Movimentações (Kardex de Auditoria)
+          </h3>
+          <span class="text-xs text-slate-500">Rastreabilidade completa de todas as operações</span>
+        </div>
+        <div class="overflow-x-auto max-h-80">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-slate-100 text-slate-600 font-semibold uppercase text-xs tracking-wider border-b border-slate-200 sticky top-0">
+              <tr>
+                <th class="py-3 px-4">Data / Hora</th>
+                <th class="py-3 px-4">Tipo</th>
+                <th class="py-3 px-4">Item & SKU</th>
+                <th class="py-3 px-4 text-center">Quantidade</th>
+                <th class="py-3 px-4">Responsável / Doc</th>
+                <th class="py-3 px-4">Observações</th>
+              </tr>
+            </thead>
+            <tbody id="kardexTableBody" class="divide-y divide-slate-200 text-slate-700">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="blindModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">
+      <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-clipboard-check"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base">Conferência Cega de Entrada</h3>
+            <p id="blindModalSubtitle" class="text-xs text-slate-400">NF-e #000 - Carga na Doca</p>
+          </div>
+        </div>
+        <button onclick="closeModal('blindModal')" class="text-slate-400 hover:text-white text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <!-- Blind Item Card (Sem a quantidade esperada da NF) -->
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center gap-4">
+          <div id="blindItemIcon" class="w-14 h-14 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center text-2xl shrink-0">
+            <i class="fa-solid fa-box"></i>
+          </div>
+          <div>
+            <span id="blindItemSku" class="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider">SKU-0000</span>
+            <h4 id="blindItemDesc" class="font-bold text-slate-800 text-base leading-snug">Nome do Material</h4>
+            <p id="blindItemUnit" class="text-xs text-slate-500 mt-1">Unidade de Medida: UN</p>
+          </div>
+        </div>
+
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900 flex items-start gap-2">
+          <i class="fa-solid fa-eye-slash text-amber-600 mt-0.5"></i>
+          <div>
+            <strong>Atenção:</strong> Por procedimento padrão de conferência cega, a quantidade informada na Nota Fiscal não é exibida. Conte fisicamente o lote que chegou à doca.
+          </div>
+        </div>
+
+        <!-- Blind Inputs -->
+        <form id="blindForm" onsubmit="submitBlindCount(event)" class="space-y-4">
+          <input type="hidden" id="blindInboundId">
+          
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+              Quantidade Contada Fisicamente <span class="text-rose-500">*</span>
+            </label>
+            <div class="relative">
+              <input type="number" id="blindInputQty" min="0" step="1" required placeholder="Ex: 50" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-base font-semibold">
+              <span id="blindInputUnitTag" class="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">UN</span>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+              Estado da Embalagem / Integridade <span class="text-rose-500">*</span>
+            </label>
+            <select id="blindInputPackaging" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+              <option value="INTEGRA">Íntegra (Embalagem lacrada, sem danos)</option>
+              <option value="AVARIADA">Avariada (Molhada, rasgada, amassada)</option>
+              <option value="VIOLADA">Violada (Lacre rompido ou ausente)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+              Observações do Almoxarife / Apontamento de Divergência
+            </label>
+            <textarea id="blindInputNotes" rows="2" placeholder="Descreva qualquer anomalia física, divergência aparente de lote ou avaria..." class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500"></textarea>
+          </div>
+
+          <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
+            <button type="button" onclick="closeModal('blindModal')" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+              Cancelar
+            </button>
+            <button type="submit" class="px-5 py-2 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors shadow-md flex items-center gap-2">
+              <i class="fa-solid fa-check-double"></i> Confirmar Conferência
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="slottingModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
+      <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-location-arrow"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base">Endereçamento WMS do Material</h3>
+            <p class="text-xs text-slate-400">Armazenamento estruturado no galpão</p>
+          </div>
+        </div>
+        <button onclick="closeModal('slottingModal')" class="text-slate-400 hover:text-white text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex justify-between items-center">
+          <div>
+            <span id="slottingSku" class="text-xs font-mono font-bold text-blue-600">SKU-0000</span>
+            <h4 id="slottingDesc" class="font-bold text-slate-800 text-sm">Material</h4>
+            <p id="slottingQty" class="text-xs text-slate-500">Lote: 0 UN</p>
+          </div>
+          <div class="text-right">
+            <span class="text-xs text-slate-400 block font-medium">Categoria Sugerida</span>
+            <span id="slottingCategoryTag" class="text-xs font-bold text-slate-700 bg-slate-200 px-2 py-0.5 rounded">Geral</span>
+          </div>
+        </div>
+
+        <form id="slottingForm" onsubmit="submitSlotting(event)" class="space-y-4">
+          <input type="hidden" id="slottingInboundId">
+
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+              Categoria Funcional de Armazenagem
+            </label>
+            <select id="slottingCategorySelect" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+              <option value="EPIs">EPIs e Uniformes (Rua A)</option>
+              <option value="Ferramentas">Ferramentas e Instrumentos (Rua B)</option>
+              <option value="Insumos">Insumos Operacionais (Rua C)</option>
+              <option value="Peças">Peças de Reposição Mecânica (Rua D)</option>
+              <option value="Químicos">Produtos Químicos / Inflamáveis (Rua E)</option>
+            </select>
+          </div>
+
+          <!-- Endereço Logístico Tridimensional: Rua - Módulo - Nível -->
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-3">
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+              Coordenadas de Endereço Físico
+            </label>
+            <div class="grid grid-cols-3 gap-2">
+              <div>
+                <span class="text-[11px] text-slate-500 font-semibold block mb-1">Rua / Corredor</span>
+                <select id="slottingRua" onchange="updateAddressPreview()" class="w-full px-2 py-1.5 border border-slate-300 rounded-lg font-mono text-sm font-bold text-center">
+                  <option value="A">Rua A</option>
+                  <option value="B">Rua B</option>
+                  <option value="C">Rua C</option>
+                  <option value="D">Rua D</option>
+                  <option value="E">Rua E</option>
+                </select>
+              </div>
+
+              <div>
+                <span class="text-[11px] text-slate-500 font-semibold block mb-1">Módulo / Coluna</span>
+                <select id="slottingModulo" onchange="updateAddressPreview()" class="w-full px-2 py-1.5 border border-slate-300 rounded-lg font-mono text-sm font-bold text-center">
+                  <option value="01">01</option>
+                  <option value="02">02</option>
+                  <option value="03">03</option>
+                  <option value="04">04</option>
+                </select>
+              </div>
+
+              <div>
+                <span class="text-[11px] text-slate-500 font-semibold block mb-1">Nível / Altura</span>
+                <select id="slottingNivel" onchange="updateAddressPreview()" class="w-full px-2 py-1.5 border border-slate-300 rounded-lg font-mono text-sm font-bold text-center">
+                  <option value="01">Nível 01 (Solo)</option>
+                  <option value="02">Nível 02 (Médio)</option>
+                  <option value="03">Nível 03 (Alto)</option>
+                  <option value="04">Nível 04 (Topo)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Visual Address Badge Preview -->
+            <div class="pt-2 text-center">
+              <span class="text-xs text-slate-500">Etiqueta de Localização Gerada:</span>
+              <div id="addressPreviewBadge" class="inline-block ml-2 px-3 py-1 bg-slate-900 text-emerald-400 font-mono font-extrabold text-sm rounded border border-slate-700 tracking-wider">
+                A-01-01
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                Lote de Fabricação
+              </label>
+              <input type="text" id="slottingLot" required class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm font-mono" placeholder="Ex: LOT-2026-X">
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                Estoque Mínimo (Ponto Pedido)
+              </label>
+              <input type="number" id="slottingMinStock" min="1" value="10" required class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm font-bold">
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
+            <button type="button" onclick="closeModal('slottingModal')" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+              Cancelar
+            </button>
+            <button type="submit" class="px-5 py-2 text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-md flex items-center gap-2">
+              <i class="fa-solid fa-floppy-disk"></i> Gravar no Estoque
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="dispatchModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
+      <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-dolly"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base">Atendimento de Requisição Interna</h3>
+            <p id="dispatchReqCode" class="text-xs text-slate-400">REQ-0000</p>
+          </div>
+        </div>
+        <button onclick="closeModal('dispatchModal')" class="text-slate-400 hover:text-white text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <!-- Picking instructions card -->
+        <div class="bg-indigo-50/70 border border-indigo-200 rounded-xl p-4">
+          <div class="flex justify-between items-start">
+            <div>
+              <span class="text-xs uppercase font-bold text-indigo-800 tracking-wider">Instrução de Picking</span>
+              <h4 id="dispatchItemName" class="font-bold text-slate-800 text-base mt-0.5">Descrição do Item</h4>
+              <p id="dispatchItemSku" class="text-xs font-mono text-slate-500">SKU-0000</p>
+            </div>
+            <div class="text-right">
+              <span class="text-xs text-slate-500 block">Endereço de Coleta:</span>
+              <span id="dispatchPickAddress" class="font-mono font-bold text-sm bg-indigo-900 text-indigo-100 px-2 py-0.5 rounded">
+                A-00-00
+              </span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-indigo-200/60 text-xs">
+            <div>
+              <span class="text-slate-500">Setor Solicitante:</span>
+              <p id="dispatchSector" class="font-bold text-slate-800">-</p>
+            </div>
+            <div>
+              <span class="text-slate-500">Saldo Disponível:</span>
+              <p id="dispatchStockBalance" class="font-bold text-emerald-700">0 UN</p>
+            </div>
+          </div>
+        </div>
+
+        <form id="dispatchForm" onsubmit="submitDispatch(event)" class="space-y-4">
+          <input type="hidden" id="dispatchReqId">
+
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+              Quantidade a Baixar <span class="text-rose-500">*</span>
+            </label>
+            <input type="number" id="dispatchQtyInput" min="1" step="1" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-base font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500">
+            <p id="dispatchMaxHint" class="text-[11px] text-slate-400 mt-1">Quantidade solicitada na ordem: 0</p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                Matrícula do Retirante <span class="text-rose-500">*</span>
+              </label>
+              <input type="text" id="dispatchWorkerId" required placeholder="Ex: MAT-4890" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                Almoxarife Responsável <span class="text-rose-500">*</span>
+              </label>
+              <input type="text" id="dispatchStaffName" required placeholder="Nome do Aluno" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+              Destino / Ordem de Serviço (O.S.)
+            </label>
+            <input type="text" id="dispatchReason" placeholder="Ex: Manutenção Preventiva Prensa Hidráulica 03" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
+          </div>
+
+          <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
+            <button type="button" onclick="closeModal('dispatchModal')" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+              Cancelar
+            </button>
+            <button type="submit" class="px-5 py-2 text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-md flex items-center gap-2">
+              <i class="fa-solid fa-arrow-down-long"></i> Efetivar Baixa de Estoque
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="resultModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-150">
+      <div id="resultModalHeader" class="px-6 py-4 flex items-center gap-3 text-white bg-emerald-600">
+        <i id="resultModalIcon" class="fa-solid fa-circle-check text-2xl"></i>
+        <h3 id="resultModalTitle" class="font-bold text-lg">Conferência Finalizada</h3>
+      </div>
+      <div class="p-6 space-y-4">
+        <div id="resultModalBody" class="text-sm text-slate-700 space-y-2">
+          <!-- Text details inserted dynamically -->
+        </div>
+        <div class="pt-2 text-right">
+          <button onclick="closeModal('resultModal')" class="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg transition-colors text-sm">
+            Entendido / Próxima Etapa
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="bg-slate-900 border-t border-slate-800 text-slate-400 text-xs py-4">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div>
+        <span>Simulador de Almoxarifado Integrado & WMS</span> &bull; 
+        <span class="text-slate-300">Curso de Logística & Gestão de Suprimentos</span>
+      </div>
+      <div class="flex items-center gap-4 text-slate-400">
+        <span><i class="fa-solid fa-database text-emerald-400 mr-1"></i> Armazenamento Local Ativo</span>
+        <span><i class="fa-solid fa-graduation-cap text-blue-400 mr-1"></i> Modo Avaliação</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Storage Key Constants
+    const STORAGE_KEY = 'ALMOX_SIMULATOR_STATE_V1';
+
+    // Default Initial Dataset for industrial warehouse operations
+    const DEFAULT_DATA = {
+      inbound: [
+        {
+          id: 'INB-101',
+          nf: 'NF-e 84920',
+          fornecedor: 'Protec Equipamentos Industriais Ltda',
+          sku: 'EPI-001',
+          descricao: 'Luva de Vaqueta Cano Curto',
+          categoria: 'EPIs',
+          icon: 'fa-hand',
+          unidade: 'PAR',
+          expectedQty: 50,
+          countedQty: null,
+          packagingStatus: null,
+          discrepancyNotes: '',
+          status: 'PENDENTE', // PENDENTE, CONFERIDO, ENDERECADO
+          divergenciaDetectada: false,
+          createdDate: '10/03/2026 08:30'
+        },
+        {
+          id: 'INB-102',
+          nf: 'NF-e 84925',
+          fornecedor: 'Fixatec Parafusos e Fixadores SA',
+          sku: 'FIX-014',
+          descricao: 'Parafuso Sextavado M10 x 50mm Galvanizado',
+          categoria: 'Insumos',
+          icon: 'fa-screwdriver',
+          unidade: 'CENTO',
+          expectedQty: 100, // Carga física virá com 95 (divergência proposital de falta para teste)
+          countedQty: null,
+          packagingStatus: null,
+          discrepancyNotes: '',
+          status: 'PENDENTE',
+          divergenciaDetectada: false,
+          createdDate: '10/03/2026 09:15'
+        },
+        {
+          id: 'INB-103',
+          nf: 'NF-e 84931',
+          fornecedor: 'LubriForce Químicos Especiais',
+          sku: 'QUI-088',
+          descricao: 'Óleo Lubrificante Sintético ISO VG 68 (Balde 20L)',
+          categoria: 'Químicos',
+          icon: 'fa-oil-can',
+          unidade: 'BD',
+          expectedQty: 12,
+          countedQty: null,
+          packagingStatus: null,
+          discrepancyNotes: '',
+          status: 'PENDENTE',
+          divergenciaDetectada: false,
+          createdDate: '10/03/2026 10:00'
+        },
+        {
+          id: 'INB-104',
+          nf: 'NF-e 84940',
+          fornecedor: 'Instrutec Medições Elétricas',
+          sku: 'FER-032',
+          descricao: 'Multímetro Digital True RMS com Termopar',
+          categoria: 'Ferramentas',
+          icon: 'fa-bolt',
+          unidade: 'UN',
+          expectedQty: 8,
+          countedQty: null,
+          packagingStatus: null,
+          discrepancyNotes: '',
+          status: 'PENDENTE',
+          divergenciaDetectada: false,
+          createdDate: '10/03/2026 10:45'
+        },
+        {
+          id: 'INB-105',
+          nf: 'NF-e 84955',
+          fornecedor: 'EletroSolda Peças Industriais',
+          sku: 'PEC-202',
+          descricao: 'Eletrodo Revestido AWS E7018 3.25mm (Cx 5kg)',
+          categoria: 'Peças',
+          icon: 'fa-fire-burner',
+          unidade: 'CX',
+          expectedQty: 25,
+          countedQty: null,
+          packagingStatus: null,
+          discrepancyNotes: '',
+          status: 'PENDENTE',
+          divergenciaDetectada: false,
+          createdDate: '10/03/2026 11:10'
+        }
+      ],
+      inventory: [
+        {
+          sku: 'EPI-002',
+          descricao: 'Capacete de Segurança com Jugular Aba Frontal',
+          categoria: 'EPIs',
+          icon: 'fa-helmet-safety',
+          endereco: 'A-01-01',
+          rua: 'A',
+          modulo: '01',
+          nivel: '01',
+          saldo: 40,
+          estoqueMinimo: 15,
+          unidade: 'UN',
+          lote: 'LT-2026-CAP',
+          dataEntrada: '05/03/2026'
+        },
+        {
+          sku: 'FER-005',
+          descricao: 'Chave Grifo Industrial 14 Polegadas',
+          categoria: 'Ferramentas',
+          icon: 'fa-wrench',
+          endereco: 'B-02-02',
+          rua: 'B',
+          modulo: '02',
+          nivel: '02',
+          saldo: 4,
+          estoqueMinimo: 8, // Crítico proposital
+          unidade: 'UN',
+          lote: 'LT-2026-GRIF',
+          dataEntrada: '01/03/2026'
+        },
+        {
+          sku: 'PEC-109',
+          descricao: 'Rolamento Rígido de Esferas 6205-2RSH',
+          categoria: 'Peças',
+          icon: 'fa-gear',
+          endereco: 'D-03-01',
+          rua: 'D',
+          modulo: '03',
+          nivel: '01',
+          saldo: 18,
+          estoqueMinimo: 10,
+          unidade: 'UN',
+          lote: 'LT-2026-ROL',
+          dataEntrada: '08/03/2026'
+        }
+      ],
+      outboundRequests: [
+        {
+          id: 'REQ-401',
+          setor: 'Manutenção Mecânica Central',
+          solicitante: 'Carlos Eduardo (Enc. Turno)',
+          sku: 'EPI-002',
+          descricao: 'Capacete de Segurança com Jugular Aba Frontal',
+          quantidadeRequisitada: 6,
+          status: 'PENDENTE', // PENDENTE, ATENDIDO
+          dataRequisicao: '10/03/2026 09:20'
+        },
+        {
+          id: 'REQ-402',
+          setor: 'Produção Linha 1 - Estamparia',
+          solicitante: 'Marcos Vinicius (Operador Líder)',
+          sku: 'FER-005',
+          descricao: 'Chave Grifo Industrial 14 Polegadas',
+          quantidadeRequisitada: 2,
+          status: 'PENDENTE',
+          dataRequisicao: '10/03/2026 10:15'
+        },
+        {
+          id: 'REQ-403',
+          setor: 'Usinagem e Torneamento',
+          solicitante: 'Roberto Silva (Técnico de Manutenção)',
+          sku: 'PEC-109',
+          descricao: 'Rolamento Rígido de Esferas 6205-2RSH',
+          quantidadeRequisitada: 5,
+          status: 'PENDENTE',
+          dataRequisicao: '10/03/2026 11:05'
+        }
+      ],
+      kardex: [
+        {
+          dataHora: '05/03/2026 14:00',
+          tipo: 'ENTRADA',
+          sku: 'EPI-002',
+          descricao: 'Capacete de Segurança com Jugular Aba Frontal',
+          quantidade: 40,
+          responsavel: 'Almoxarifado Geral',
+          documento: 'NF-e 83900',
+          observacao: 'Carga inicial estocada no endereço A-01-01'
+        },
+        {
+          dataHora: '01/03/2026 09:10',
+          tipo: 'ENTRADA',
+          sku: 'FER-005',
+          descricao: 'Chave Grifo Industrial 14 Polegadas',
+          quantidade: 4,
+          responsavel: 'Almoxarifado Geral',
+          documento: 'NF-e 83120',
+          observacao: 'Estocada no endereço B-02-02'
+        },
+        {
+          dataHora: '08/03/2026 16:30',
+          tipo: 'ENTRADA',
+          sku: 'PEC-109',
+          descricao: 'Rolamento Rígido de Esferas 6205-2RSH',
+          quantidade: 18,
+          responsavel: 'Almoxarifado Geral',
+          documento: 'NF-e 84110',
+          observacao: 'Estocado no endereço D-03-01'
+        }
+      ],
+      auditLog: [] // Registra acertos e falhas na conferência cega para a nota final do aluno
+    };
+
+    // Global in-memory state
+    let state = null;
+
+    function loadState() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          state = JSON.parse(stored);
+        } else {
+          state = JSON.parse(JSON.stringify(DEFAULT_DATA));
+          saveState();
+        }
+      } catch (err) {
+        console.error("Falha ao recuperar dados do localStorage, recarregando padrão.", err);
+        state = JSON.parse(JSON.stringify(DEFAULT_DATA));
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        console.error("Erro salvando estado", e);
+      }
+      refreshUI();
+    }
+
+    function promptResetSimulation() {
+      // Replaces alert/confirm with direct user experience
+      showResultModal(
+        "Reiniciar Simulador da Aula",
+        `<div class="space-y-3">
+          <p>Você tem certeza que deseja apagar os dados locais e resetar o simulador para o estado original da aula?</p>
+          <div class="flex gap-2 justify-end pt-2">
+            <button onclick="closeModal('resultModal')" class="px-3 py-1.5 bg-slate-200 text-slate-800 rounded font-medium text-xs">Cancelar</button>
+            <button onclick="executeResetSimulation()" class="px-3 py-1.5 bg-rose-600 text-white rounded font-bold text-xs">Sim, Reiniciar Base</button>
+          </div>
+        </div>`,
+        'danger'
+      );
+    }
+
+    function executeResetSimulation() {
+      state = JSON.parse(JSON.stringify(DEFAULT_DATA));
+      saveState();
+      closeModal('resultModal');
+      showResultModal("Simulador Reiniciado", "A base foi redefinida para a carga inicial. Boa aula!", "success");
+    }
+
+    function switchTab(tabIndex) {
+      document.querySelectorAll('.tab-panel').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('text-emerald-600', 'border-emerald-600', 'bg-white', 'shadow-sm');
+        btn.classList.add('text-slate-600', 'border-transparent');
+      });
+
+      const activeContent = document.getElementById(`tabContent${tabIndex}`);
+      const activeBtn = document.getElementById(`tabBtn${tabIndex}`);
+
+      if (activeContent && activeBtn) {
+        activeContent.classList.remove('hidden');
+        activeBtn.classList.remove('text-slate-600', 'border-transparent');
+        activeBtn.classList.add('text-emerald-600', 'border-emerald-600', 'bg-white', 'shadow-sm');
+      }
+    }
+
+    function renderMetrics() {
+      // 1. Total Stock Units
+      const totalUnits = state.inventory.reduce((sum, item) => sum + (Number(item.saldo) || 0), 0);
+      document.getElementById('statTotalStock').innerText = totalUnits.toLocaleString('pt-BR');
+
+      // 2. Pending Inbound
+      const pendingInbound = state.inbound.filter(i => i.status === 'PENDENTE').length;
+      document.getElementById('statPendingInbound').innerText = pendingInbound;
+      document.getElementById('badgeTab1').innerText = pendingInbound;
+
+      // 3. Pending Put-Away (Conferidos aguardando endereçamento)
+      const pendingSlotting = state.inbound.filter(i => i.status === 'CONFERIDO').length;
+      document.getElementById('badgeTab2').innerText = pendingSlotting;
+      const putAwayBadge = document.getElementById('putAwayCountBadge');
+      if (putAwayBadge) putAwayBadge.innerText = `${pendingSlotting} aguardando endereço`;
+
+      // 4. Pending Outbound
+      const pendingOutbound = state.outboundRequests.filter(r => r.status === 'PENDENTE').length;
+      document.getElementById('statPendingOutbound').innerText = pendingOutbound;
+      document.getElementById('badgeTab3').innerText = pendingOutbound;
+
+      // 5. Critical Stock Alert (items at or below safety stock)
+      const criticalCount = state.inventory.filter(item => item.saldo <= item.estoqueMinimo).length;
+      const critElem = document.getElementById('statCriticalStock');
+      critElem.innerText = criticalCount;
+      if (criticalCount > 0) {
+        critElem.classList.add('badge-pulse');
+      } else {
+        critElem.classList.remove('badge-pulse');
+      }
+    }
+
+    function renderInboundTable() {
+      const tbody = document.getElementById('inboundTableBody');
+      tbody.innerHTML = '';
+
+      if (state.inbound.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-400">Nenhuma carga pendente na doca.</td></tr>`;
+        return;
+      }
+
+      state.inbound.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition-colors";
+
+        let statusBadge = '';
+        let actionBtn = '';
+
+        if (item.status === 'PENDENTE') {
+          statusBadge = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+            <i class="fa-solid fa-clock-rotate-left mr-1"></i> Aguardando Doca
+          </span>`;
+          actionBtn = `<button onclick="openBlindModal('${item.id}')" class="px-3 py-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors shadow-xs flex items-center gap-1.5 ml-auto">
+            <i class="fa-solid fa-list-check"></i> Iniciar Conferência Cega
+          </button>`;
+        } else if (item.status === 'CONFERIDO') {
+          const divStyle = item.divergenciaDetectada ? 'bg-rose-100 text-rose-800 border-rose-200' : 'bg-blue-100 text-blue-800 border-blue-200';
+          const divText = item.divergenciaDetectada ? 'Conferido c/ Divergência' : 'Conferido 100% Ok';
+          statusBadge = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${divStyle}">
+            ${item.divergenciaDetectada ? '<i class="fa-solid fa-triangle-exclamation mr-1"></i>' : '<i class="fa-solid fa-check mr-1"></i>'} ${divText}
+          </span>`;
+          actionBtn = `<button onclick="openSlottingModal('${item.id}')" class="px-3 py-1.5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-xs flex items-center gap-1.5 ml-auto">
+            <i class="fa-solid fa-location-dot"></i> Endereçar no WMS
+          </button>`;
+        } else if (item.status === 'ENDERECADO') {
+          statusBadge = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+            <i class="fa-solid fa-boxes-packing mr-1"></i> Estocado no WMS
+          </span>`;
+          actionBtn = `<span class="text-xs text-slate-400 font-medium italic">Processo Finalizado</span>`;
+        }
+
+        tr.innerHTML = `
+          <td class="py-3 px-4">
+            <div class="font-bold text-slate-900">${item.nf}</div>
+            <div class="text-xs text-slate-400">${item.createdDate}</div>
+          </td>
+          <td class="py-3 px-4 font-medium text-slate-800 text-xs sm:text-sm">${item.fornecedor}</td>
+          <td class="py-3 px-4">
+            <div class="flex items-center gap-2">
+              <span class="w-7 h-7 rounded bg-slate-100 text-slate-600 flex items-center justify-center text-xs">
+                <i class="fa-solid ${item.icon || 'fa-box'}"></i>
+              </span>
+              <div>
+                <div class="font-semibold text-slate-800">${item.descricao}</div>
+                <div class="text-xs font-mono text-slate-400 font-bold">${item.sku}</div>
+              </div>
+            </div>
+          </td>
+          <td class="py-3 px-4 font-mono font-bold text-xs text-slate-600">${item.unidade}</td>
+          <td class="py-3 px-4 text-center">${statusBadge}</td>
+          <td class="py-3 px-4 text-right">${actionBtn}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function openBlindModal(inboundId) {
+      const item = state.inbound.find(i => i.id === inboundId);
+      if (!item) return;
+
+      document.getElementById('blindInboundId').value = item.id;
+      document.getElementById('blindModalSubtitle').innerText = `${item.nf} - Fornecedor: ${item.fornecedor}`;
+      document.getElementById('blindItemSku').innerText = item.sku;
+      document.getElementById('blindItemDesc').innerText = item.descricao;
+      document.getElementById('blindItemUnit').innerText = `Unidade de Medida Física: ${item.unidade}`;
+      document.getElementById('blindInputUnitTag').innerText = item.unidade;
+
+      const iconContainer = document.getElementById('blindItemIcon');
+      iconContainer.innerHTML = `<i class="fa-solid ${item.icon || 'fa-box'}"></i>`;
+
+      // Reset form
+      document.getElementById('blindInputQty').value = '';
+      document.getElementById('blindInputPackaging').value = 'INTEGRA';
+      document.getElementById('blindInputNotes').value = '';
+
+      openModal('blindModal');
+    }
+
+    function submitBlindCount(event) {
+      event.preventDefault();
+      const id = document.getElementById('blindInboundId').value;
+      const item = state.inbound.find(i => i.id === id);
+      if (!item) return;
+
+      const counted = Number(document.getElementById('blindInputQty').value);
+      const packaging = document.getElementById('blindInputPackaging').value;
+      const notes = document.getElementById('blindInputNotes').value.trim();
+
+      item.countedQty = counted;
+      item.packagingStatus = packaging;
+      item.discrepancyNotes = notes;
+      item.status = 'CONFERIDO';
+
+      // Pedagogical Check: Blind comparison with hidden NF value
+      const diff = counted - item.expectedQty;
+      const hasQtyDiscrepancy = diff !== 0;
+      const hasPackagingDamage = packaging !== 'INTEGRA';
+      item.divergenciaDetectada = hasQtyDiscrepancy || hasPackagingDamage;
+
+      // Register audit score for student
+      state.auditLog.push({
+        data: new Date().toLocaleTimeString('pt-BR'),
+        itemSku: item.sku,
+        nf: item.nf,
+        esperado: item.expectedQty,
+        contado: counted,
+        embalagem: packaging,
+        divergencia: item.divergenciaDetectada,
+        apontamentoAluno: notes
+      });
+
+      closeModal('blindModal');
+      saveState();
+
+      // Show Feedback to student
+      let resultHtml = '';
+      let isSuccess = !item.divergenciaDetectada;
+
+      if (isSuccess) {
+        resultHtml = `
+          <div class="bg-emerald-50 border border-emerald-200 text-emerald-900 p-3 rounded-lg">
+            <p class="font-bold text-sm"><i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i> Conferência Perfeita!</p>
+            <p class="text-xs mt-1">A quantidade contada (<strong>${counted} ${item.unidade}</strong>) confere rigorosamente com a Nota Fiscal oculta e a integridade da embalagem estava aprovada.</p>
+          </div>
+          <p class="text-xs text-slate-600">O lote foi movido para a <strong>Aba 2 (Armazenagem & WMS)</strong> para receber endereço nas prateleiras.</p>
+        `;
+        showResultModal("Conferência Validada", resultHtml, "success");
+      } else {
+        let issues = [];
+        if (hasQtyDiscrepancy) {
+          const motivo = diff > 0 ? `Sobra de ${diff} ${item.unidade}` : `Falta de ${Math.abs(diff)} ${item.unidade}`;
+          issues.push(`<strong>Divergência Quantitativa:</strong> NF indicava ${item.expectedQty} ${item.unidade}, mas foram contados ${counted} ${item.unidade} (${motivo}).`);
+        }
+        if (hasPackagingDamage) {
+          issues.push(`<strong>Avaria de Embalagem:</strong> Classificada como "${packaging}".`);
+        }
+
+        resultHtml = `
+          <div class="bg-rose-50 border border-rose-200 text-rose-900 p-3 rounded-lg space-y-2">
+            <p class="font-bold text-sm"><i class="fa-solid fa-triangle-exclamation text-rose-600 mr-1"></i> Divergência Identificada na Carga!</p>
+            <ul class="text-xs space-y-1 list-disc pl-4">
+              ${issues.map(msg => `<li>${msg}</li>`).join('')}
+            </ul>
+          </div>
+          <p class="text-xs text-slate-600">Excelente procedimento! Em um almoxarifado real, a ocorrência gerará uma <em>Não Conformidade</em> para o fornecedor. A quantidade contada fisicamente (${counted}) seguirá para endereçamento.</p>
+        `;
+        showResultModal("Divergência Registrada", resultHtml, "warning");
+      }
+    }
+
+    function renderPutAwayAndInventory() {
+      // 1. Render pending Put-Away Cards
+      const container = document.getElementById('pendingPutAwayList');
+      const putAwayCard = document.getElementById('pendingPutAwayCard');
+      container.innerHTML = '';
+
+      const pendingItems = state.inbound.filter(i => i.status === 'CONFERIDO');
+
+      if (pendingItems.length === 0) {
+        putAwayCard.classList.add('hidden');
+      } else {
+        putAwayCard.classList.remove('hidden');
+        pendingItems.forEach(item => {
+          const div = document.createElement('div');
+          div.className = "bg-white p-4 rounded-xl border border-amber-300/80 shadow-xs flex flex-col justify-between";
+          div.innerHTML = `
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-mono font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded">${item.sku}</span>
+                <span class="text-xs font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">${item.countedQty} ${item.unidade}</span>
+              </div>
+              <h4 class="font-bold text-slate-800 text-sm mb-1">${item.descricao}</h4>
+              <p class="text-xs text-slate-500">NF: ${item.nf} &bull; Cat: ${item.categoria}</p>
+            </div>
+            <button onclick="openSlottingModal('${item.id}')" class="mt-4 w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-xs">
+              <i class="fa-solid fa-map-pin"></i> Atribuir Endereço WMS
+            </button>
+          `;
+          container.appendChild(div);
+        });
+      }
+
+      // 2. Render Main Inventory Table
+      renderInventoryTable();
+    }
+
+    function renderInventoryTable() {
+      const tbody = document.getElementById('inventoryTableBody');
+      tbody.innerHTML = '';
+
+      const searchTerm = (document.getElementById('inventorySearch')?.value || '').toLowerCase();
+      const filterCategory = document.getElementById('categoryFilter')?.value || 'ALL';
+
+      let items = state.inventory.filter(item => {
+        const matchesSearch = item.descricao.toLowerCase().includes(searchTerm) || item.sku.toLowerCase().includes(searchTerm);
+        const matchesCategory = (filterCategory === 'ALL') || (item.categoria === filterCategory);
+        return matchesSearch && matchesCategory;
+      });
+
+      if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400">Nenhum material encontrado no estoque com os filtros atuais.</td></tr>`;
+        return;
+      }
+
+      items.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition-colors";
+
+        let stockBadge = '';
+        if (item.saldo === 0) {
+          stockBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-rose-100 text-rose-800">Zerado</span>`;
+        } else if (item.saldo <= item.estoqueMinimo) {
+          stockBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-rose-100 text-rose-700 border border-rose-300">
+            <i class="fa-solid fa-triangle-exclamation mr-1"></i> Crítico (Repor)
+          </span>`;
+        } else if (item.saldo <= item.estoqueMinimo * 1.5) {
+          stockBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800">Atenção</span>`;
+        } else {
+          stockBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800">Normal</span>`;
+        }
+
+        tr.innerHTML = `
+          <td class="py-3 px-4">
+            <div class="flex items-center gap-2">
+              <span class="w-7 h-7 rounded bg-slate-100 text-slate-600 flex items-center justify-center text-xs">
+                <i class="fa-solid ${item.icon || 'fa-box'}"></i>
+              </span>
+              <div>
+                <div class="font-bold text-slate-900">${item.descricao}</div>
+                <div class="text-xs font-mono font-bold text-slate-400">${item.sku}</div>
+              </div>
+            </div>
+          </td>
+          <td class="py-3 px-4 font-medium text-xs text-slate-600">${item.categoria}</td>
+          <td class="py-3 px-4">
+            <span class="font-mono font-bold text-xs bg-slate-900 text-emerald-400 px-2 py-1 rounded shadow-xs tracking-wider">
+              ${item.endereco || 'SEM-LOCAL'}
+            </span>
+          </td>
+          <td class="py-3 px-4 text-center font-bold text-sm text-slate-800">
+            ${item.saldo} <span class="text-xs font-normal text-slate-500">${item.unidade}</span>
+          </td>
+          <td class="py-3 px-4 text-center text-xs font-semibold text-slate-500">
+            ${item.estoqueMinimo} ${item.unidade}
+          </td>
+          <td class="py-3 px-4 text-center">${stockBadge}</td>
+          <td class="py-3 px-4 text-right">
+            <div class="text-xs font-mono font-bold text-slate-700">${item.lote || 'PADRÃO'}</div>
+            <div class="text-[10px] text-slate-400">${item.dataEntrada || 'Hoje'}</div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function openSlottingModal(inboundId) {
+      const item = state.inbound.find(i => i.id === inboundId);
+      if (!item) return;
+
+      document.getElementById('slottingInboundId').value = item.id;
+      document.getElementById('slottingSku').innerText = item.sku;
+      document.getElementById('slottingDesc').innerText = item.descricao;
+      document.getElementById('slottingQty').innerText = `Lote Físico: ${item.countedQty || item.expectedQty} ${item.unidade}`;
+      document.getElementById('slottingCategoryTag').innerText = item.categoria;
+
+      // Select corresponding default category
+      const catSelect = document.getElementById('slottingCategorySelect');
+      catSelect.value = item.categoria;
+
+      // Suggest warehouse aisle based on category
+      const ruaSelect = document.getElementById('slottingRua');
+      if (item.categoria === 'EPIs') ruaSelect.value = 'A';
+      else if (item.categoria === 'Ferramentas') ruaSelect.value = 'B';
+      else if (item.categoria === 'Insumos') ruaSelect.value = 'C';
+      else if (item.categoria === 'Peças') ruaSelect.value = 'D';
+      else if (item.categoria === 'Químicos') ruaSelect.value = 'E';
+
+      document.getElementById('slottingLot').value = `LT-${new Date().getFullYear()}-${item.sku.substring(0, 3)}`;
+      updateAddressPreview();
+      openModal('slottingModal');
+    }
+
+    function updateAddressPreview() {
+      const r = document.getElementById('slottingRua').value;
+      const m = document.getElementById('slottingModulo').value;
+      const n = document.getElementById('slottingNivel').value;
+      const addr = `${r}-${m}-${n}`;
+      document.getElementById('addressPreviewBadge').innerText = addr;
+    }
+
+    function submitSlotting(event) {
+      event.preventDefault();
+      const id = document.getElementById('slottingInboundId').value;
+      const inboundItem = state.inbound.find(i => i.id === id);
+      if (!inboundItem) return;
+
+      const category = document.getElementById('slottingCategorySelect').value;
+      const r = document.getElementById('slottingRua').value;
+      const m = document.getElementById('slottingModulo').value;
+      const n = document.getElementById('slottingNivel').value;
+      const finalAddress = `${r}-${m}-${n}`;
+      const lot = document.getElementById('slottingLot').value.trim();
+      const minStock = Number(document.getElementById('slottingMinStock').value) || 10;
+      const quantityToAdd = Number(inboundItem.countedQty) || Number(inboundItem.expectedQty);
+
+      // Check if item already exists in inventory
+      let existing = state.inventory.find(inv => inv.sku === inboundItem.sku);
+
+      if (existing) {
+        existing.saldo += quantityToAdd;
+        existing.endereco = finalAddress;
+        existing.categoria = category;
+        existing.estoqueMinimo = minStock;
+        existing.lote = lot;
+      } else {
+        state.inventory.push({
+          sku: inboundItem.sku,
+          descricao: inboundItem.descricao,
+          categoria: category,
+          icon: inboundItem.icon || 'fa-box',
+          endereco: finalAddress,
+          rua: r,
+          modulo: m,
+          nivel: n,
+          saldo: quantityToAdd,
+          estoqueMinimo: minStock,
+          unidade: inboundItem.unidade,
+          lote: lot,
+          dataEntrada: new Date().toLocaleDateString('pt-BR')
+        });
+      }
+
+      // Mark inbound order as completed
+      inboundItem.status = 'ENDERECADO';
+
+      // Log movement to Kardex
+      state.kardex.unshift({
+        dataHora: new Date().toLocaleString('pt-BR'),
+        tipo: 'ENTRADA',
+        sku: inboundItem.sku,
+        descricao: inboundItem.descricao,
+        quantidade: quantityToAdd,
+        responsavel: 'Almoxarife (Aluno)',
+        documento: inboundItem.nf,
+        observacao: `Endereçado em ${finalAddress} | Lote: ${lot}`
+      });
+
+      closeModal('slottingModal');
+      saveState();
+
+      showResultModal(
+        "Armazenagem Concluída",
+        `<div class="space-y-2">
+          <p class="text-sm">O lote de <strong>${quantityToAdd} ${inboundItem.unidade}</strong> de <strong>${inboundItem.descricao}</strong> foi guardado com sucesso.</p>
+          <div class="bg-blue-50 border border-blue-200 p-2.5 rounded text-xs text-blue-900 font-mono">
+            Localização Registrada: <strong>${finalAddress}</strong> (Rua ${r}, Coluna ${m}, Altura ${n})
+          </div>
+        </div>`,
+        'success'
+      );
+    }
+
+    function renderOutboundAndKardex() {
+      // 1. Render Requests
+      const tbody = document.getElementById('outboundTableBody');
+      tbody.innerHTML = '';
+
+      const pendingRequests = state.outboundRequests.filter(r => r.status === 'PENDENTE');
+
+      if (pendingRequests.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-400">Todas as requisições de materiais foram atendidas.</td></tr>`;
+      } else {
+        pendingRequests.forEach(req => {
+          const invItem = state.inventory.find(i => i.sku === req.sku);
+          const currentStock = invItem ? invItem.saldo : 0;
+          const address = invItem ? invItem.endereco : '<span class="text-rose-500 font-semibold">Sem Endereço</span>';
+
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-slate-50 transition-colors";
+
+          let stockStatusStyle = currentStock >= req.quantidadeRequisitada ? 'text-emerald-700 font-bold' : 'text-rose-600 font-bold';
+
+          tr.innerHTML = `
+            <td class="py-3 px-4">
+              <div class="font-bold text-slate-900">${req.id}</div>
+              <div class="text-xs text-slate-500">${req.setor}</div>
+              <div class="text-[11px] text-slate-400">Sol: ${req.solicitante}</div>
+            </td>
+            <td class="py-3 px-4">
+              <div class="font-semibold text-slate-800">${req.descricao}</div>
+              <div class="text-xs font-mono text-slate-400">${req.sku}</div>
+            </td>
+            <td class="py-3 px-4 text-center font-bold text-sm text-slate-900">
+              ${req.quantidadeRequisitada}
+            </td>
+            <td class="py-3 px-4">
+              <span class="font-mono text-xs bg-slate-100 text-slate-800 font-bold px-2 py-1 rounded border border-slate-300">
+                ${address}
+              </span>
+            </td>
+            <td class="py-3 px-4 text-center ${stockStatusStyle} text-sm">
+              ${currentStock}
+            </td>
+            <td class="py-3 px-4 text-right">
+              <button onclick="openDispatchModal('${req.id}')" class="px-3 py-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-xs flex items-center gap-1.5 ml-auto">
+                <i class="fa-solid fa-hand-holding-box"></i> Atender Requisição
+              </button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      // 2. Render Kardex Table
+      const kardexBody = document.getElementById('kardexTableBody');
+      kardexBody.innerHTML = '';
+
+      if (state.kardex.length === 0) {
+        kardexBody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-400">Nenhuma movimentação registrada no Kardex.</td></tr>`;
+        return;
+      }
+
+      state.kardex.forEach(log => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition-colors text-xs";
+
+        const isEntrada = log.tipo === 'ENTRADA';
+        const typeBadge = isEntrada
+          ? `<span class="px-2 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-800"><i class="fa-solid fa-arrow-down mr-1"></i> Entrada</span>`
+          : `<span class="px-2 py-0.5 rounded-full font-bold bg-rose-100 text-rose-800"><i class="fa-solid fa-arrow-up mr-1"></i> Baixa/Saída</span>`;
+
+        tr.innerHTML = `
+          <td class="py-2.5 px-4 font-mono text-slate-500">${log.dataHora}</td>
+          <td class="py-2.5 px-4">${typeBadge}</td>
+          <td class="py-2.5 px-4 font-medium text-slate-800">
+            ${log.descricao} <span class="font-mono text-slate-400 font-normal">(${log.sku})</span>
+          </td>
+          <td class="py-2.5 px-4 text-center font-bold font-mono text-sm ${isEntrada ? 'text-emerald-700' : 'text-rose-600'}">
+            ${isEntrada ? '+' : '-'}${log.quantidade}
+          </td>
+          <td class="py-2.5 px-4">
+            <span class="font-semibold text-slate-700 block">${log.responsavel}</span>
+            <span class="text-[11px] text-slate-400">${log.documento}</span>
+          </td>
+          <td class="py-2.5 px-4 text-slate-500">${log.observacao || '-'}</td>
+        `;
+        kardexBody.appendChild(tr);
+      });
+    }
+
+    function openDispatchModal(reqId) {
+      const req = state.outboundRequests.find(r => r.id === reqId);
+      if (!req) return;
+
+      const inv = state.inventory.find(i => i.sku === req.sku);
+      const stock = inv ? inv.saldo : 0;
+      const addr = inv ? inv.endereco : 'NÃO CADASTRADO';
+
+      document.getElementById('dispatchReqId').value = req.id;
+      document.getElementById('dispatchReqCode').innerText = `${req.id} - ${req.setor}`;
+      document.getElementById('dispatchItemName').innerText = req.descricao;
+      document.getElementById('dispatchItemSku').innerText = req.sku;
+      document.getElementById('dispatchSector').innerText = req.setor;
+      document.getElementById('dispatchPickAddress').innerText = addr;
+      document.getElementById('dispatchStockBalance').innerText = `${stock} ${inv ? inv.unidade : 'UN'}`;
+      document.getElementById('dispatchQtyInput').value = req.quantidadeRequisitada;
+      document.getElementById('dispatchMaxHint').innerText = `Quantidade requisitada originalmente: ${req.quantidadeRequisitada} ${inv ? inv.unidade : 'UN'}`;
+
+      openModal('dispatchModal');
+    }
+
+    function submitDispatch(event) {
+      event.preventDefault();
+      const reqId = document.getElementById('dispatchReqId').value;
+      const req = state.outboundRequests.find(r => r.id === reqId);
+      if (!req) return;
+
+      const inv = state.inventory.find(i => i.sku === req.sku);
+      if (!inv) {
+        showResultModal("Item Não Encontrado", "O material requisitado não possui registro no estoque para baixa.", "danger");
+        return;
+      }
+
+      const qtyToDispatch = Number(document.getElementById('dispatchQtyInput').value);
+      const workerId = document.getElementById('dispatchWorkerId').value.trim();
+      const staffName = document.getElementById('dispatchStaffName').value.trim();
+      const reason = document.getElementById('dispatchReason').value.trim();
+
+      // Inventory Balance Validation
+      if (qtyToDispatch > inv.saldo) {
+        showResultModal(
+          "Saldo Insuficiente",
+          `<p class="text-sm">Não é possível baixar <strong>${qtyToDispatch} ${inv.unidade}</strong>. O saldo atual em estoque no endereço <strong>${inv.endereco}</strong> é de apenas <strong>${inv.saldo} ${inv.unidade}</strong>.</p>`,
+          "danger"
+        );
+        return;
+      }
+
+      // Deduct balance
+      inv.saldo -= qtyToDispatch;
+      req.status = 'ATENDIDO';
+
+      // Append to Kardex
+      state.kardex.unshift({
+        dataHora: new Date().toLocaleString('pt-BR'),
+        tipo: 'SAIDA',
+        sku: inv.sku,
+        descricao: inv.descricao,
+        quantidade: qtyToDispatch,
+        responsavel: `${staffName} (Almoxarife)`,
+        documento: `${req.id} / ${workerId}`,
+        observacao: `Retirado para ${req.setor} | Justificativa: ${reason || 'Sem O.S.'}`
+      });
+
+      closeModal('dispatchModal');
+      saveState();
+
+      // Check if hit reorder threshold
+      let safetyWarning = '';
+      if (inv.saldo <= inv.estoqueMinimo) {
+        safetyWarning = `
+          <div class="mt-2 p-2 bg-rose-50 border border-rose-200 text-rose-800 rounded text-xs flex items-center gap-2">
+            <i class="fa-solid fa-bell text-rose-600"></i>
+            <span><strong>Aviso de Ponto de Pedido:</strong> O saldo deste item atingiu o nível crítico (${inv.saldo} ${inv.unidade} &le; Mínimo de ${inv.estoqueMinimo}). Solicitar compra de reposição!</span>
+          </div>
+        `;
+      }
+
+      showResultModal(
+        "Baixa de Estoque Concluída",
+        `<div class="space-y-2">
+          <p class="text-sm">A requisição <strong>${req.id}</strong> foi atendida com sucesso.</p>
+          <ul class="text-xs text-slate-600 space-y-1 bg-slate-50 p-2.5 rounded border border-slate-200">
+            <li><strong>Material:</strong> ${inv.descricao}</li>
+            <li><strong>Quantidade Entregue:</strong> ${qtyToDispatch} ${inv.unidade}</li>
+            <li><strong>Retirante:</strong> ${workerId} (${req.setor})</li>
+            <li><strong>Novo Saldo em Estoque:</strong> ${inv.saldo} ${inv.unidade}</li>
+          </ul>
+          ${safetyWarning}
+        </div>`,
+        'success'
+      );
+    }
+
+    function exportReportCSV() {
+      if (!state) return;
+
+      let csv = "RELATORIO DE AUDITORIA E DESEMPENHO DO ALMOXARIFADO\n";
+      csv += `Gerado em:;${new Date().toLocaleString('pt-BR')}\n\n`;
+
+      csv += "1. REGISTRO DE CONFERENCIA CEGA (AVALIACAO PEDAGOGICA)\n";
+      csv += "Data;NF;SKU;Qtd Esperada NF;Qtd Contada Aluno;Embalagem;Divergencia?;Observacao do Aluno\n";
+      state.auditLog.forEach(log => {
+        csv += `"${log.data}";"${log.nf}";"${log.itemSku}";${log.esperado};${log.contado};"${log.embalagem}";"${log.divergencia ? 'SIM' : 'NAO'}";"${log.apontamentoAluno || ''}"\n`;
+      });
+
+      csv += "\n2. POSICAO ATUAL DE ESTOQUE E ENDERECAMENTO (WMS)\n";
+      csv += "SKU;Descricao;Categoria;Endereco WMS;Saldo Atual;Estoque Minimo;Status;Lote\n";
+      state.inventory.forEach(inv => {
+        const status = inv.saldo <= inv.estoqueMinimo ? 'CRITICO' : 'NORMAL';
+        csv += `"${inv.sku}";"${inv.descricao}";"${inv.categoria}";"${inv.endereco}";${inv.saldo};${inv.estoqueMinimo};"${status}";"${inv.lote}"\n`;
+      });
+
+      csv += "\n3. HISTORICO COMPLETO DE MOVIMENTACOES (KARDEX)\n";
+      csv += "Data Hora;Tipo;SKU;Descricao;Quantidade;Responsavel;Documento;Observacoes\n";
+      state.kardex.forEach(k => {
+        csv += `"${k.dataHora}";"${k.tipo}";"${k.sku}";"${k.descricao}";${k.quantidade};"${k.responsavel}";"${k.documento}";"${k.observacao || ''}"\n`;
+      });
+
+      const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Relatorio_Almoxarifado_Turno_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function openModal(modalId) {
+      const m = document.getElementById(modalId);
+      if (m) m.classList.remove('hidden');
+    }
+
+    function closeModal(modalId) {
+      const m = document.getElementById(modalId);
+      if (m) m.classList.add('hidden');
+    }
+
+    function showResultModal(title, contentHtml, type = 'success') {
+      const header = document.getElementById('resultModalHeader');
+      const icon = document.getElementById('resultModalIcon');
+      const titleElem = document.getElementById('resultModalTitle');
+      const body = document.getElementById('resultModalBody');
+
+      titleElem.innerText = title;
+      body.innerHTML = contentHtml;
+
+      // Color scheme according to message type
+      if (type === 'danger') {
+        header.className = "px-6 py-4 flex items-center gap-3 text-white bg-rose-600";
+        icon.className = "fa-solid fa-triangle-exclamation text-2xl";
+      } else if (type === 'warning') {
+        header.className = "px-6 py-4 flex items-center gap-3 text-slate-900 bg-amber-400";
+        icon.className = "fa-solid fa-circle-exclamation text-2xl";
+      } else {
+        header.className = "px-6 py-4 flex items-center gap-3 text-white bg-emerald-600";
+        icon.className = "fa-solid fa-circle-check text-2xl";
+      }
+
+      openModal('resultModal');
+    }
+
+    function refreshUI() {
+      renderMetrics();
+      renderInboundTable();
+      renderPutAwayAndInventory();
+      renderOutboundAndKardex();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      refreshUI();
+    });
+  </script>
+</body>
+</html>
